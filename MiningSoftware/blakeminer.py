@@ -5,14 +5,14 @@
 # Python wrapper for Xilinx Serial Miner
 
 # CONFIGURATION - SOLO MINING via blakecoind
-host = "tvpi.lan"	# Set hostname here (usually localhost)
+host = "localhost"	# Set hostname here (usually localhost)
 user = "username"
 password = "password"
 http_port = "8772"	# Getwork port
 
 # CONFIGURATION - CHANGE THIS (eg try COM1, COM2, COM3, COM4 etc)
-#serial_port = "COM4"
-serial_port = "/dev/ttyUSB0"	# raspberry pi
+serial_port = "COM4"
+# serial_port = "/dev/ttyUSB0"	# raspberry pi
 
 # CONFIGURATION - how often to refresh work. 20 seconds is fine, but work is
 # not initially fetched until this timeout expires. Reduce it for debugging
@@ -58,7 +58,8 @@ def stats(count, starttime):
 	else:
 		stddev = 0
 
-	return "[%i accepted, %i failed, %.2f +/- %.2f khash/s]" % (count[0], count[1], rate, stddev)
+	# return "[%i accepted, %i failed, %.2f +/- %.2f khash/s]" % (count[0], count[1], rate, stddev)
+	return "[%i accepted, %i failed" % (count[0], count[1])	# Rate calcs invalid for BLAKE
 
 class Reader(Thread):
 	def __init__(self):
@@ -108,6 +109,7 @@ class Writer(Thread):
 
 			# print("block " + self.block + " target " + self.target)	# DEBUG
 
+			# Target is unused in BLAKE so just disable warnings for now
 			sdiff = self.target.decode('hex')[31:27:-1]
 			intTarget = int(sdiff.encode('hex'), 16)
 			if (intTarget < 1):
@@ -117,8 +119,8 @@ class Writer(Thread):
 				self.target = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000"
 			else:
 				newdiff = 65536.0 / (intTarget+1)
-				if (self.diff != newdiff):
-					print "New target diff =", newdiff
+				# if (self.diff != newdiff):
+				#	print "New target diff =", newdiff
 				self.diff = newdiff
 
 			# Replace MSB 16 bits of target with clock (NB its reversed)
@@ -128,7 +130,6 @@ class Writer(Thread):
 			# print("Sending data to FPGA")	# DEBUG
 			
 			midstate = ''
-			# proc = subprocess.Popen(['midstate',self.block],stdout=subprocess.PIPE)	# windows
 			proc = subprocess.Popen(['./midstate',self.block],stdout=subprocess.PIPE)	# linux
 			while True:
 				msline = proc.stdout.readline()
@@ -144,12 +145,6 @@ class Writer(Thread):
 			# for blakecoin send 16 bytes data plus midstate plus 4 bytes of 32 byte target (used for dynclock only)
 			payload = self.target.decode('hex')[31:27:-1] + self.block.decode('hex')[79:63:-1] + midstate.decode('hex')[::-1] 
 			
-			# TEST HASH, this should match on nonce 0000318f
-			# NB The pool will REJECT this share as it did not send the data...
-			# UNCOMMENT the following two lines for testing...
-			# test_payload ="000000014eb4577c82473a069ca0e95703254da62e94d1902ab6f0eae8b1e718565775af20c9ba6ced48fc9915ef01c54da2200090801b2d2afc406264d491c7dfc7b0b251e91f141b44717e00310000ff070000"
-			# payload = test_payload.decode('hex')[::-1]
-
 			# print("Payload " + payload.encode('hex_codec'))	# DEBUG
 			
 			ser.write(payload)
@@ -177,8 +172,12 @@ class Submitter(Thread):
 
 		data = self.block[:152] + hrnonce + self.block[160:]
 		print ("submitting " + data)
-		os.system ("echo ./checkblake " + data + ">>logmine-ms.log")
-		os.system ("./checkblake " + data)
+		if (os.name == "nt"):
+			os.system ("checkblake " + data + ">>logmine-ms.log")
+			os.system ("checkblake " + data)
+		else:
+			os.system ("echo ./checkblake " + data + ">>logmine-ms.log")	# Log file is runnable as a shell script
+			os.system ("./checkblake " + data)
 
 		try:
 			result = bitcoin.getwork(data)
