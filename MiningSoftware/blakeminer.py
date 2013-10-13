@@ -59,7 +59,7 @@ def stats(count, starttime):
 		stddev = 0
 
 	# return "[%i accepted, %i failed, %.2f +/- %.2f khash/s]" % (count[0], count[1], rate, stddev)
-	return "[%i accepted, %i failed" % (count[0], count[1])	# Rate calcs invalid for BLAKE
+	return "[%i accepted, %i failed]" % (count[0], count[1])	# Rate calcs invalid for BLAKE
 
 class Reader(Thread):
 	def __init__(self):
@@ -130,7 +130,7 @@ class Writer(Thread):
 			# print("Sending data to FPGA")	# DEBUG
 			
 			midstate = ''
-			proc = subprocess.Popen(['./midstate',self.block],stdout=subprocess.PIPE)	# linux
+			proc = subprocess.Popen(['./midstate',self.block],stdout=subprocess.PIPE)	# OK for linux and windows
 			while True:
 				msline = proc.stdout.readline()
 				if (msline != ''):
@@ -173,7 +173,7 @@ class Submitter(Thread):
 		data = self.block[:152] + hrnonce + self.block[160:]
 		print ("submitting " + data)
 		if (os.name == "nt"):
-			os.system ("checkblake " + data + ">>logmine-ms.log")
+			os.system ("echo checkblake " + data + ">>logmine-ms.log")		# Log file is runnable (rename .BAT)
 			os.system ("checkblake " + data)
 		else:
 			os.system ("echo ./checkblake " + data + ">>logmine-ms.log")	# Log file is runnable as a shell script
