@@ -22,12 +22,10 @@
 
 `timescale 1ns/1ps
 
-module hashcore (hash_clk, din, shift, /*data1, data2, */ nonce_msb, nonce_out, golden_nonce_out, golden_nonce_match, loadnonce);
+module hashcore (hash_clk, din, shift, nonce_msb, nonce_out, golden_nonce_out, golden_nonce_match, loadnonce);
 
 	input hash_clk;
 	input din, shift;
-	//input [255:0] data1;
-	//input [127:0] data2;
 	input [4:0] nonce_msb;		// Supports multicore (set MULTICORE below)
 	output [31:0] nonce_out;
 	output [31:0] golden_nonce_out;
@@ -46,10 +44,9 @@ module hashcore (hash_clk, din, shift, /*data1, data2, */ nonce_msb, nonce_out, 
 		assign nonce = { nonce_msb, nonce_cnt };
 	`else
 		`ifdef SIM
-			//reg [31:0] nonce = 32'hffbd9207;	// Simulation test (genesis block) - NOMULTICORE
-			// reg [31:0] nonce = 32'hffbd9206;	// One earlier
-			// reg [31:0] nonce = 32'hffbd910c;	// F8 ish earlier for serial shift - works OK
-			reg [31:0] nonce = 32'hffbd910b;	// F8 ish earlier for serial shift
+			// reg [31:0] nonce = 32'hffbd9207;	// Simulation test (genesis block) - NOMULTICORE
+			// reg [31:0] nonce = 32'hffbd910b;	// F8 ish earlier for serial shift
+			reg [31:0] nonce = 32'd0;			// NB Initially loaded from data2[127:96]
 		`else
 			reg [31:0] nonce = 32'd0;			// NB Initially loaded from data2[127:96]
 		`endif
@@ -60,6 +57,7 @@ module hashcore (hash_clk, din, shift, /*data1, data2, */ nonce_msb, nonce_out, 
 	reg [31:0] golden_nonce = 32'd0;
 	assign golden_nonce_out = golden_nonce;
 	reg golden_nonce_match = 1'b0;
+	reg [31:0] nonce_d = 32'd0;
 	
 	reg start = 0;
 
@@ -81,7 +79,10 @@ module hashcore (hash_clk, din, shift, /*data1, data2, */ nonce_msb, nonce_out, 
 		golden_nonce_match <= 0;
 		
 		if (reset | shift_d)			// NB shift_d so we don't start until data is valid
+		begin
 			cycle <= 0;
+			start <= 0;
+		end
 		
 		shift_d <= shift;
 		
@@ -100,65 +101,41 @@ module hashcore (hash_clk, din, shift, /*data1, data2, */ nonce_msb, nonce_out, 
 		end
 
 		if (cycle == 1)			// NOT cycle==0 as timing of EN is incorrect after shift
-		begin
 			start <= 1;
-		end
 
 		if (cycle == 2)
 			start <= 0;
 
-		if (cycle == 19)
+		if (cycle == 3)
+		begin
+			if (gn_match)
+			begin
+				golden_nonce <= nonce_d;
+				golden_nonce_match <= 1;
+			end
+		end
+
+		if (cycle == 17)
 		begin
 			`ifndef NOMULTICORE
 				nonce_cnt <= nonce_cnt + 27'd1;
 			`else
 				nonce <= nonce + 32'd1;
 			`endif
-			if (gn_match)
-			begin
-				golden_nonce <= nonce;
-				golden_nonce_match <= 1;
-			end
-			cycle <= 1;
+			nonce_d <= nonce;
+			start <= 1;
+			cycle <= 2;
 		end
 	end
-	
+
 BLAKE_CORE_MS BLAKE_core(
    .clk(hash_clk), .rst_n(~reset),
-   // .hash7(hash7),
    .gn_match(gn_match),
    .start(start),
    .nonce(nonce),
    .din(din),
    .shift(shift),
    .initnonce(initnonce)
-   /*
-   .IV0(data1[31:0]),
-   .IV1(data1[63:32]),
-   .IV2(data1[95:64]),
-   .IV3(data1[127:96]),
-   .IV4(data1[159:128]),
-   .IV5(data1[191:160]),
-   .IV6(data1[223:192]),
-   .IV7(data1[255:224]),
-   .imsg0(data2[31:0]),
-   .imsg1(data2[63:32]),
-   .imsg2(data2[95:64]),
-   .imsg3(nonce)//,
-   .imsg3(data[127:96]),
-   .imsg4(data[159:128]),
-   .imsg5(data[191:160]),
-   .imsg6(data[223:192]),
-   .imsg7(data[255:224]),
-   .imsg8(data[287:256]),
-   .imsg9(data[319:288]),
-   .imsg10(data[351:320]),
-   .imsg11(data[383:352]),
-   .imsg12(data[415:384]),
-   .imsg13(data[447:416]),
-   .imsg14(data[479:448]),
-   .imsg15(data[511:480])
-   */
 );
 
 endmodule

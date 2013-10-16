@@ -38,7 +38,10 @@ module test_blakeminer ();
 
 
 	// TEST DATA (diff=1) NB target, nonce, data, midstate (shifted from the msb/left end) - GENESIS BLOCK
-	reg [415:0] data = 416'h000007ffffbd9207ffff001e11f35052d554469e3171e6831d493f45254964259bc31bade1b5bb1ae3c327bc54073d19f0ea633b;
+	   reg [415:0] data = 416'h000007ffffbd9207ffff001e11f35052d554469e3171e6831d493f45254964259bc31bade1b5bb1ae3c327bc54073d19f0ea633b;
+	// ALSO test starting at -1 and -2 nonce to check for timing issues
+	// reg [415:0] data = 416'h000007ffffbd9206ffff001e11f35052d554469e3171e6831d493f45254964259bc31bade1b5bb1ae3c327bc54073d19f0ea633b;
+	// reg [415:0] data = 416'h000007ffffbd9205ffff001e11f35052d554469e3171e6831d493f45254964259bc31bade1b5bb1ae3c327bc54073d19f0ea633b;
 	
 	reg			serial_send = 0;
 	wire		serial_busy;

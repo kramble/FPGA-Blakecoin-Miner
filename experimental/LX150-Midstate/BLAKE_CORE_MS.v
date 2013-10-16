@@ -2,29 +2,11 @@
 // Under free license for research purposes, see http://www.rcis.aist.go.jp/special/SASEBO/SHA3-en.html
 
 module BLAKE_CORE_MS(clk, rst_n, start,
-// IV0, IV1, IV2, IV3, IV4, IV5, IV6, IV7,
-// hash7,	// Don't need both (see bottom)
 gn_match,
-// imsg0,imsg1,imsg2,imsg3 // ,imsg4,imsg5,imsg6,imsg7,imsg8,imsg9,imsg10,imsg11,imsg12,imsg13,imsg14,imsg15
 din, shift,
 nonce,
 initnonce
 );
-
-// imsg15 .. imsg4
-// 384'h000002800000000000000001000000000000000000000000000000000000000000000000000000000000000080000000
-// imsg15 = 00000280
-// imsg14 = 00000000
-// imsg13 = 00000001
-// imsg12 = 00000000
-// imsg11 = 00000000
-// imsg10 = 00000000
-// imsg9  = 00000000
-// imsg8  = 00000000
-// imsg7  = 00000000
-// imsg6  = 00000000
-// imsg5  = 00000000
-// imsg4  = 80000000
 
 parameter C0 = 32'h243F6A88; 
 parameter C1 = 32'h85A308D3;
@@ -48,17 +30,11 @@ input rst_n;
 
 input start;
 
-// input [31:0] IV0, IV1, IV2, IV3, IV4, IV5, IV6, IV7;
-// input [31:0] imsg0,imsg1,imsg2,imsg3; // ,imsg4,imsg5,imsg6,imsg7,imsg8,imsg9,imsg10,imsg11,imsg12,imsg13,imsg14,imsg15;
-
 input din, shift;
 input [31:0] nonce;
 output [31:0] initnonce;	// Pass out data2[127:96] for initialization
 
-// output reg [31:0] hash7;	// Don't need both (see bottom)
 output gn_match;
-
-// wire[63:0] counter = { 32'h280, 32'h0 };
 
 reg [31:0] state0, state1, state2, state3;
 reg [31:0] state4, state5, state6, state7; 
@@ -84,6 +60,22 @@ assign IV4 = data1[159:128];
 assign IV5 = data1[191:160];
 assign IV6 = data1[223:192];
 assign IV7 = data1[255:224];
+
+// imsg15 .. imsg4 are constants in the midstate version, vis
+// 384'h000002800000000000000001000000000000000000000000000000000000000000000000000000000000000080000000
+// imsg15 = 00000280
+// imsg14 = 00000000
+// imsg13 = 00000001
+// imsg12 = 00000000
+// imsg11 = 00000000
+// imsg10 = 00000000
+// imsg9  = 00000000
+// imsg8  = 00000000
+// imsg7  = 00000000
+// imsg6  = 00000000
+// imsg5  = 00000000
+// imsg4  = 80000000
+
 assign imsg0 = data2[31:0];
 assign imsg1 = data2[63:32];
 assign imsg2 = data2[95:64];
@@ -108,7 +100,8 @@ end
 always @(posedge clk or negedge rst_n) begin
    if (~rst_n) round <= 0;
    else if (EN) begin
-      if (round == 5'h10) round <= 0;
+      //if (round == 5'h10) round <= 0;
+      if (round == 5'h10 || start) round <= 0;	// For gn_match_d
       else round <= round + 1;
    end
    else round <= round;
@@ -597,26 +590,32 @@ end
 
 //}}}
 
-//{{{ hash - TODO CHOOSE which gives better speed
+//{{{ hash
+
+reg gn_match_d = 1'b0;
+always @(posedge clk)
+`ifndef SIM
+	gn_match_d <= (round == 5'h0f) && ((IV7 ^ chain7 ^ chain15) == 0);
+`else
+	gn_match_d <= (round == 5'h0f) && ((IV7[23:0] ^ chain7[23:0] ^ chain15[23:0]) == 0);
+`endif
+
+assign gn_match = gn_match_d;
 
 /*
-always @(posedge clk) begin
-if (round == 5'h10) hash7 <= IV7 ^ state7 ^ state15;
-   else hash7 <= hash7;
-end
-*/
-
-// ALTERNATIVE ...
 `ifndef SIM
 assign gn_match = (round == 5'h10) && ((IV7 ^ state7 ^ state15) == 0);					// diff=256
 // assign gn_match = (round == 5'h10) && ((state7 ^ state15) == IV7);					// equiv
 `else
 assign gn_match = (round == 5'h10) && ((IV7[23:0] ^ state7[23:0] ^ state15[23:0]) == 0);	// diff=1 for genesis block
 `endif
+*/
+
 //}}}
 
-
 `ifdef SIM	// For debugging  ...
+	wire gn_hash_diff_256 = (IV7 ^ chain7 ^ chain15) == 0;
+	wire gn_hash_diff_001 = (IV7[23:0] ^ chain7[23:0] ^ chain15[23:0]) == 0;
 	wire[31:0] hash0 = IV0 ^ state0 ^ state8;
 	wire[31:0] hash1 = IV1 ^ state1 ^ state9;
 	wire[31:0] hash2 = IV2 ^ state2 ^ state10;
@@ -626,6 +625,5 @@ assign gn_match = (round == 5'h10) && ((IV7[23:0] ^ state7[23:0] ^ state15[23:0]
 	wire[31:0] hash6 = IV6 ^ state6 ^ state14;
 	wire[31:0] hash7 = IV7 ^ state7 ^ state15;
 `endif
-
 
 endmodule
