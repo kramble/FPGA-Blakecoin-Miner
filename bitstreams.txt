@@ -5,7 +5,9 @@ experimental/LX150-Midstate
 
 https://www.dropbox.com/s/gnxkr0oob1w90ak/blakeminer-ms-v12-12core-ucf-10-fmax-34.bit
 
-This runs OK at 50MHz on my Lancelot. Your maximum speed will vary, the default is 25MHz
+https://www.dropbox.com/s/z4fm61r3ilsqum4/blakeminer-blue-16core-ucf-50-fmax-47.bit
+
+These run OK at 50MHz on my Lancelot. Your maximum speed will vary, the default is 25MHz
 but it is configurable at runtime (see MiningSoftware/README.txt).
 
 windows binaries for use with MiningSoftware
