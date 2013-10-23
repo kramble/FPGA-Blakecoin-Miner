@@ -11,10 +11,15 @@ These run OK at 50MHz on my Lancelot. Your maximum speed will vary, the default 
 but it is configurable at runtime (see MiningSoftware/README.txt). They give 66MH/s and
 89MH/s respectively on the dual fpga Lancelot.
 
+experimental/LX150-Unrolled
+---------------------------
+
 https://www.dropbox.com/s/0m4rsqbwb5phga5/blakeunrolled-v03-2core-ucf10-fmax28.bit
 
-This is the fully unrolled pipeleine with 2 cores which runs at 45MHz for an estimated
-160MHash/sec on the dual fpga Lancelot.
+https://www.dropbox.com/s/adyecveo2kamicm/blakeunrolled-v03-3core-ucf10-fmax28.bit
+
+These are the fully unrolled pipeleine which runs at 45MHz for an estimated 160MHash/sec
+and 240MHash/sec respectively on the dual fpga Lancelot.
 
 windows binaries for use with MiningSoftware
 --------------------------------------------
