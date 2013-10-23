@@ -8,7 +8,13 @@ https://www.dropbox.com/s/gnxkr0oob1w90ak/blakeminer-ms-v12-12core-ucf-10-fmax-3
 https://www.dropbox.com/s/z4fm61r3ilsqum4/blakeminer-blue-16core-ucf-50-fmax-47.bit
 
 These run OK at 50MHz on my Lancelot. Your maximum speed will vary, the default is 25MHz
-but it is configurable at runtime (see MiningSoftware/README.txt).
+but it is configurable at runtime (see MiningSoftware/README.txt). They give 66MH/s and
+89MH/s respectively on the dual fpga Lancelot.
+
+https://www.dropbox.com/s/0m4rsqbwb5phga5/blakeunrolled-v03-2core-ucf10-fmax28.bit
+
+This is the fully unrolled pipeleine with 2 cores which runs at 45MHz for an estimated
+160MHash/sec on the dual fpga Lancelot.
 
 windows binaries for use with MiningSoftware
 --------------------------------------------
