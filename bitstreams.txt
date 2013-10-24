@@ -18,8 +18,15 @@ https://www.dropbox.com/s/0m4rsqbwb5phga5/blakeunrolled-v03-2core-ucf10-fmax28.b
 
 https://www.dropbox.com/s/adyecveo2kamicm/blakeunrolled-v03-3core-ucf10-fmax28.bit
 
-These are the fully unrolled pipeleine which runs at 45MHz for an estimated 160MHash/sec
-and 240MHash/sec respectively on the dual fpga Lancelot.
+These are the fully unrolled pipeleine which runs at 45MHz for an estimated 180MHash/sec
+and 270MHash/sec respectively on the dual fpga Lancelot.
+
+experimental/LX150-UnrolledPiped
+--------------------------------
+
+https://www.dropbox.com/s/995nb4lbc7bu1n9/blakeup-v01-3core-ucf56-fmax57.bit
+
+Runs at 75Mhz for 450MHash/sec on the dual fpga Lancelot.
 
 windows binaries for use with MiningSoftware
 --------------------------------------------

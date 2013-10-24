@@ -15,9 +15,4 @@ LX150 code, also OrphanedGland, udif, TheSeven, makomk, and newMeat1 as credited
 the fpgaminer bitcoin thread https://bitcointalk.org/index.php?topic=9047.0 and ngzhang
 for his Icarus/Lancelot boards and github. Not forgetting bluedragon747 for blakecoin!
 
-The code is at a very early stage of development, but currently achieves around 66MHash/s
-(theoretical) on the dual-LX150 lancelot board with 12 cores per fpga, clocked at 50MHz.
-
-Considerable improvement should be possible with additional cores (for which there is
-plenty of spare LUT resource, but useage is currently restricted by the need for ISE
-build optimisation) and/or altenative pipelining schemes.
+The code currently achieves around 450MHash/s at 75Mhz on the dual-LX150 lancelot board.
