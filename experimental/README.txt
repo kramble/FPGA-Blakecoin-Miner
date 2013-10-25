@@ -8,4 +8,8 @@ LX150-UnrolledPiped    32 clocks/hash, 32 stages, up to 4 cores
                        NB runs approx double clock speed due to extra pipelining
                        Best speed to date 450MHash/sec at 75MHz (3 cores)
 
-LX150-MaxPiped         96 clocks/hash, 96 stages - work in progress
+LX150-MaxPiped         96 clocks/hash, 96 stages (6 latency G Function)
+                       This is resource heavy, so FourPiped may be better
+
+LX150-FourPiped        64 clocks/hash, 64 stages (4 latency G Function)
+                       Work in progress
