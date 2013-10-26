@@ -166,7 +166,7 @@ module blakeminer (osc_clk, RxD, TxD, led, extminer_rxd, extminer_txd, dip, TMP_
 `ifdef SIM
 	assign shift_clk = shiften & uart_clk;
 `else
-	BUFGCE shift_clkbuf (.I(uart_clk), .CE(shiften), .O(shift_clk);
+	BUFGCE shift_clkbuf (.I(uart_clk), .CE(shiften), .O(shift_clk));
 `endif
 
 	always @ (posedge uart_clk)
