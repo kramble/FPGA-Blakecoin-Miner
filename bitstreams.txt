@@ -28,6 +28,20 @@ https://www.dropbox.com/s/995nb4lbc7bu1n9/blakeup-v01-3core-ucf56-fmax57.bit
 
 Runs at 75Mhz for 450MHash/sec on the dual fpga Lancelot.
 
+experimental/LX150-FourGatedClk
+--------------------------------
+
+https://www.dropbox.com/s/mg3rsv1rh2nrc7c/blakefourbufce-2core-ucf146-fmax154.bit
+
+Runs at 200Mhz for 800MHash/sec on the dual fpga Lancelot.
+
+experimental/X6500-Basic
+------------------------
+
+https://www.dropbox.com/s/ean7rbweij40oh1/X6500-Basic-v01-fmax-150MHz.bit
+
+Test build for X6500 board (see README in above folder). May not work.
+
 windows binaries for use with MiningSoftware
 --------------------------------------------
 
