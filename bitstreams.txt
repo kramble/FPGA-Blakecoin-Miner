@@ -38,9 +38,16 @@ Runs at 200Mhz for 800MHash/sec on the dual fpga Lancelot.
 experimental/X6500-Basic
 ------------------------
 
-https://www.dropbox.com/s/ean7rbweij40oh1/X6500-Basic-v01-fmax-150MHz.bit
+No working bitstream, use X6500-Robust
 
-Test build for X6500 board (see README in above folder). May not work.
+experimental/X6500-Robust
+------------------------
+
+https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit
+
+NB This is an initial bitstream, tested and working. Default clock is 50MHz.
+Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending
+on the actual device manufacturing and operating temperature.
 
 windows binaries for use with MiningSoftware
 --------------------------------------------

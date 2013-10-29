@@ -13,9 +13,8 @@ The latter is depreciated, but may be simpler to modify (work in progress - watc
 
 Bitstream ...
 https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit
-https://www.dropbox.com/s/lygc90a0xz9el4q/X6500-Robust-v02-fmax-150MHz.bit
 
-NB This is an initial test bitstream so it may not work. Default clock is 50MHz.
+NB This is an initial test bitstream which is tested and works. Default clock is 50MHz.
 Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending
 on the actual device manufacturing and operating temperature.
 
