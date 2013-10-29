@@ -19,3 +19,8 @@ LX150-FourGatedClk     As above but using gated clock on the serial bus which ma
 					   
 Any of the last three (or a variant) may give a good result, the difficulty is the
 "random" nature of the Xilinx build process. Not yet managed to fit three cores.
+
+X6500-Basic            Basic port to X6500. NOT WORKING.
+
+X6500-Robust           A second try. WORKS BUT BUGGY (only the 100MHz synthesis
+                       clock build seems to work, and only up to 63MHz overclock).

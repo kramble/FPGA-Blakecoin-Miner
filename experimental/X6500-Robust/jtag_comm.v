@@ -258,6 +258,18 @@ module jtag_comm # (
 	);
 	*/
 	
+	reg [1:0] jt_tck_d = 0;
+	always @ (posedge rx_dcm_progclk)	// 100Mhz
+	begin
+		jt_tck_d[1:0] <= { jt_tck_d[0], jt_tck };
+	end
+	
+	`ifndef SIM
+		BUFG jt_tck_inst (.I(jt_tck_d[1]), .O(jt_tck_buf));
+	`else
+		assign jt_tck_buf = jt_tck_d[1];
+	`endif
+	
 	// Replace FIFO with simple latch in robust version
 	reg [31:0] reg_golden_nonce = 32'hFFFFFFFF;
 	reg [31:0] tck_golden_nonce = 32'hFFFFFFFF;
@@ -267,7 +279,7 @@ module jtag_comm # (
 	wire [3:0] jtag_addr = dr[35:32];
 	wire fifo_rd = checksum_valid & jt_update & ~jtag_we & (jtag_addr == 4'hE) & ~fifo_empty & ~jt_reset & jt_sel;
 	reg [3:0] rx_gn_flag = 4'b0;
-	always @ (posedge jt_tck)
+	always @ (posedge jt_tck_buf)
 	begin
 		rx_gn_flag[3:1] <= rx_gn_flag[2:0];			// Clock crossing
 		fifo_we <= rx_gn_flag[3] ^ rx_gn_flag[2];
@@ -279,7 +291,7 @@ module jtag_comm # (
 	begin
 		if (rx_new_nonce)							// Assumes strobe of single clock duration
 		begin
-			rx_gn_flag[0] <= ~rx_gn_flag[0];		// Clock crossing
+			rx_gn_flag[0] <= ~rx_gn_flag[0];		// Clock crossing (slight hazard of close matches cancelling flag)
 			reg_golden_nonce <= rx_golden_nonce;	// Slight hazard of overwriting existing result across clock domains
 		end
 	end
@@ -288,7 +300,7 @@ module jtag_comm # (
 	assign jt_tdo = dr[0];
 
 
-	always @ (posedge jt_tck or posedge jt_reset)
+	always @ (posedge jt_tck_buf or posedge jt_reset)
 	begin
 		if (jt_reset == 1'b1)
 		begin

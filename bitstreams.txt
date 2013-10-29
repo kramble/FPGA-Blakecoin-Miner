@@ -43,7 +43,9 @@ No working bitstream, use X6500-Robust
 experimental/X6500-Robust
 ------------------------
 
-https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit
+https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit (single core)
+
+https://www.dropbox.com/s/aalxmdbumare7ez/X6500-Robust-v04-2core-fmax-100MHz.bit (dual core)
 
 NB This is an initial bitstream, tested and working. Default clock is 50MHz.
 Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending

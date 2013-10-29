@@ -41,7 +41,8 @@ module blakeminer_top (
 	// clock frequency above this threshold.
 	localparam MAXIMUM_FREQUENCY = 250;
 	
-
+	// Number of mining cores
+	localparam NUM_CORES = 2;					// 1 to 4 (limited by nonce_msb width), typically 2 for sucessful PAR
 
 	//// PLL
 	wire hash_clk;
@@ -73,20 +74,23 @@ module blakeminer_top (
 	wire [95:0] comm_data;
 	wire comm_new_work;
 	reg is_golden_ticket = 1'b0;
-	reg [3:0] golden_ticket_buf = 4'b0;
-	reg [127:0] golden_nonce_buf;
-
-	wire gn_match;
-	wire [31:0] golden_nonce;
-
-	// Single core for now
-`ifdef SIM
-		// Fixed 11 prefix in SIM to match genesis block
-		hashcore M (hash_clk, comm_midstate, comm_data, 2'd3, golden_nonce, gn_match);
-`else
-		// Fixed 00 prefix (variable in multicore version)
-		hashcore M (hash_clk, comm_midstate, comm_data, 2'd0, golden_nonce, gn_match);
-`endif				
+	reg [31:0] golden_nonce;
+	wire [NUM_CORES-1:0]gn_match_i;
+	wire [NUM_CORES*32-1:0] golden_nonce_i;
+	
+	generate
+		genvar i;
+		for (i = 0; i < NUM_CORES; i = i + 1)
+		begin: miners
+		`ifdef SIM
+			wire [1:0] nonce_msb = 3 - i;		// Fudge for simulation with < 4 cores as genesis block nonce has 2'b11 prefix
+			// wire [1:0] nonce_msb = (2+i)%4;	// For simulation with 2 cores, swaps result to test mux logic (modulo 4 so generic)
+		`else
+			wire [1:0] nonce_msb = i;
+		`endif
+			hashcore M (hash_clk, comm_midstate, comm_data, nonce_msb, golden_nonce_i[i*32+31:i*32], gn_match_i[i]);
+		end // for
+	endgenerate
 
 
 `ifndef SIMNOJTAG
@@ -96,8 +100,8 @@ module blakeminer_top (
 		.INITIAL_FREQUENCY (BOOTUP_FREQUENCY)
 	) comm_blk (
 		.rx_hash_clk (hash_clk),
-		.rx_new_nonce (golden_ticket_buf[3]),
-		.rx_golden_nonce (golden_nonce_buf[127:96]),
+		.rx_new_nonce (is_golden_ticket),
+		.rx_golden_nonce (golden_nonce),
 
 		.tx_new_work (comm_new_work),
 		.tx_midstate (comm_midstate),
@@ -114,17 +118,35 @@ module blakeminer_top (
 	assign comm_data = 96'hffff001e11f35052d554469e;
 `endif
 
-
 	//// Control Unit
 	
 	always @ (posedge hash_clk)
 	begin
-		// Check to see if the last hash generated is valid.
-		is_golden_ticket <= gn_match;
-
-		// krabmle: this shift register is pointless, but leave it in for now
-		golden_ticket_buf <= {golden_ticket_buf[2:0], is_golden_ticket};
-		golden_nonce_buf <= {golden_nonce_buf[95:0], golden_nonce};
+		// Mux results (rather klunky, novice verilogger afoot)
+		is_golden_ticket <= 1'b0;
+		if (gn_match_i[0])
+		begin
+			golden_nonce <= golden_nonce_i[31:0];
+			is_golden_ticket <= 1'b1;
+		end
+		else
+		if (NUM_CORES > 1 && gn_match_i[NUM_CORES > 1 ? 1 : 0])	// Avoids bounds error
+		begin
+			golden_nonce <= golden_nonce_i[(NUM_CORES>1?63:31):(NUM_CORES>1?32:0)];
+			is_golden_ticket <= 1'b1;
+		end
+		else
+		if (NUM_CORES > 2 && gn_match_i[NUM_CORES > 2 ? 2 : 0])
+		begin
+			golden_nonce <= golden_nonce_i[(NUM_CORES>2?95:31):(NUM_CORES>2?64:0)];
+			is_golden_ticket <= 1'b1;
+		end
+		else
+		if (NUM_CORES > 3 && gn_match_i[NUM_CORES > 3 ? 3 : 0])
+		begin
+			golden_nonce <= golden_nonce_i[(NUM_CORES>3?127:31):(NUM_CORES>3?96:0)];
+			is_golden_ticket <= 1'b1;
+		end
 	end
 
 endmodule

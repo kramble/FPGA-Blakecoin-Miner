@@ -11,8 +11,11 @@ https://github.com/fizzisist/x6500-miner
 
 The latter is depreciated, but may be simpler to modify (work in progress - watch this space)
 
-Bitstream ...
-https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit
+Bitstreams ...
+
+https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit (single core)
+
+https://www.dropbox.com/s/aalxmdbumare7ez/X6500-Robust-v04-2core-fmax-100MHz.bit (dual core)
 
 NB This is an initial test bitstream which is tested and works. Default clock is 50MHz.
 Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending
