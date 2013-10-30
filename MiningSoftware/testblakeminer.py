@@ -27,6 +27,10 @@ from threading import Thread, Event
 from Queue import Queue
 import sys
 import subprocess
+import struct
+from ctypes import *
+from binascii import hexlify, unhexlify
+from blake8 import BLAKE as BLAKE
 
 dynclock = 0
 dynclock_hex = "0000"
@@ -92,7 +96,6 @@ class Writer(Thread):
 		self.daemon = True
 		self.go = True
 		self.infile = open("test_data.txt","r")
-		# self.infile = open("test_data_fpga2.txt","r")
 		self.nonce = 0
 		self.nonce_tested = 0
 		self.nonce_ok = 0
@@ -157,20 +160,13 @@ class Writer(Thread):
 
 			# print("Sending data to FPGA")	# DEBUG
 			
-			midstate = ''
-			# proc = subprocess.Popen(['midstate',self.block],stdout=subprocess.PIPE)	# windows
-			proc = subprocess.Popen(['./midstate',self.block],stdout=subprocess.PIPE)	# linux
-			while True:
-				msline = proc.stdout.readline()
-				if (msline != ''):
-					midstate = msline.rstrip()
-				else:
-					break
-	
-			if (len(midstate) != 64):
-				print ("midstate length error")
-				misdtate = "0" * 64			# Just do something rather than abort
-				
+			midstate_blake8 = BLAKE(256).midstate(struct.pack("<16I", *struct.unpack(">16I", self.block.decode('hex')[:64])))
+			# print('midstate_blake8 %s' % (hexlify(midstate_blake8).decode()))
+			midstate_blake8_swap = struct.pack("<8I", *struct.unpack(">8I", midstate_blake8))
+			# print('midswap_blake8  %s' % (hexlify(midstate_blake8_conv).decode()))
+
+			midstate = hexlify(midstate_blake8_swap)
+			
 			# for blakecoin send 16 bytes data plus midstate plus 4 bytes of 32 byte target (used for dynclock only)
 			payload = self.target.decode('hex')[31:27:-1] + self.block.decode('hex')[79:63:-1] + midstate.decode('hex')[::-1] 
 			# print("NEW " + payload.encode('hex_codec'))	# DEBUG

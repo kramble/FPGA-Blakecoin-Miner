@@ -14,11 +14,8 @@ http_port = "8772"	# Getwork port
 serial_port = "COM4"
 # serial_port = "/dev/ttyUSB0"	# raspberry pi
 
-# CONFIGURATION - how often to refresh work. 20 seconds is fine, but work is
-# not initially fetched until this timeout expires. Reduce it for debugging
-# and for stratum (2 works fine).
-# askrate = 20	# Getwork
-askrate = 20
+# CONFIGURATION - how often to refresh work
+askrate = 1						# 800Mhash/S needs frequent getwork to avoid rehashing old work
 
 ###############################################################################
 
@@ -30,11 +27,15 @@ from Queue import Queue
 import sys
 import subprocess
 import os
+import struct
+from ctypes import *
+from binascii import hexlify, unhexlify
+from blake8 import BLAKE as BLAKE
 
 dynclock = 0
 dynclock_hex = "0000"
 
-def stats(count, starttime):
+def stats(count, starttime, hw_err):
 	# BTC 2**32 hashes per share (difficulty 1)
 	# mhshare = 4294.967296
 	# LTC 2**32 / 2048 hashes per share (difficulty 32)
@@ -59,7 +60,7 @@ def stats(count, starttime):
 		stddev = 0
 
 	# return "[%i accepted, %i failed, %.2f +/- %.2f khash/s]" % (count[0], count[1], rate, stddev)
-	return "[%i accepted, %i failed]" % (count[0], count[1])	# Rate calcs invalid for BLAKE
+	return "%i accepted, %i failed, %d errors" % (count[0], count[1], hw_err)	# Rate calcs invalid for BLAKE
 
 class Reader(Thread):
 	def __init__(self):
@@ -129,18 +130,12 @@ class Writer(Thread):
 			
 			# print("Sending data to FPGA")	# DEBUG
 			
-			midstate = ''
-			proc = subprocess.Popen(['./midstate',self.block],stdout=subprocess.PIPE)	# OK for linux and windows
-			while True:
-				msline = proc.stdout.readline()
-				if (msline != ''):
-					midstate = msline.rstrip()
-				else:
-					break
-	
-			if (len(midstate) != 64):
-				print ("midstate length error")
-				misdtate = "0" * 64			# Just do something rather than abort
+			midstate_blake8 = BLAKE(256).midstate(struct.pack("<16I", *struct.unpack(">16I", self.block.decode('hex')[:64])))
+			# print('midstate_blake8 %s' % (hexlify(midstate_blake8).decode()))
+			midstate_blake8_swap = struct.pack("<8I", *struct.unpack(">8I", midstate_blake8))
+			# print('midswap_blake8  %s' % (hexlify(midstate_blake8_conv).decode()))
+
+			midstate = hexlify(midstate_blake8_swap)
 				
 			# for blakecoin send 16 bytes data plus midstate plus 4 bytes of 32 byte target (used for dynclock only)
 			payload = self.target.decode('hex')[31:27:-1] + self.block.decode('hex')[79:63:-1] + midstate.decode('hex')[::-1] 
@@ -167,26 +162,41 @@ class Submitter(Thread):
 
 		# print("Block found on " + ctime())
 		print("Share found on " + ctime() + " nonce " + self.nonce.encode('hex_codec'))
-		
+		sys.stdout.flush()	
 		hrnonce = self.nonce[::-1].encode('hex')
 
 		data = self.block[:152] + hrnonce + self.block[160:]
-		print ("submitting " + data)
+		sys.stdout.flush()
+		
+		hash_blake8 = BLAKE(256).digest(struct.pack("<20I", *struct.unpack(">20I", data.decode('hex')[:80])))
+		hash_str = hexlify(hash_blake8).decode()
+		print('hash %s' % hash_str)
+		
 		if (os.name == "nt"):
 			os.system ("echo checkblake " + data + ">>logmine-ms.log")		# Log file is runnable (rename .BAT)
-			os.system ("checkblake " + data)
 		else:
 			os.system ("echo ./checkblake " + data + ">>logmine-ms.log")	# Log file is runnable as a shell script
-			os.system ("./checkblake " + data)
 
-		try:
-			result = bitcoin.getwork(data)
-			print("Upstream result: " + str(result))
-		except:
-			print("RPC send error")
-			# a sensible boolean for stats
+		# Uncomment ONE of the following to configure
+		if (hash_str[56:64] == "00000000"):		# Submit diff=1 shares (POOL mining)
+		# if (hash_str[55:64] == "000000000"):	# Only submit diff=16 shares to reduce blakecoind loading
+		# if (hash_str[54:64] == "0000000000"):	# Only submit diff=256 shares to reduce blakecoind loading
+			try:
+				print ("submitting " + data)
+				result = bitcoin.getwork(data)
+				print("Upstream result: " + str(result))
+			except:
+				print("RPC send error")
+				result = False
+		else:
+			if (hash_str[56:64] == "00000000"):		# Submit diff=1 shares (POOL mining)
+				print ("Share not submitted")
+			else:
+				print ("HARDWARE ERROR INVALID HASH")
+				disp.hw_err = disp.hw_err + 1		# Probably needs some sort of lock, should use results_queue instead
 			result = False
 
+		sys.stdout.flush()	
 		results_queue.put(result)
 
 class Display_stats(Thread):
@@ -195,9 +205,11 @@ class Display_stats(Thread):
 
 		self.count = [0, 0]
 		self.starttime = time()
+		self.hw_err = 0
 		self.daemon = True
 
 		print("Miner started on " + ctime())
+		sys.stdout.flush()	
 
 	def run(self):
 		while True:
@@ -208,7 +220,8 @@ class Display_stats(Thread):
 			else:
 				self.count[1] += 1
 				
-			print(stats(self.count, self.starttime))
+			print(stats(self.count, self.starttime, self.hw_err))
+			sys.stdout.flush()	
 				
 			results_queue.task_done()
 

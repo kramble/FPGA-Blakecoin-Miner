@@ -1,3 +1,5 @@
+NB These are no longer needed as blakeminer.py now uses blake8.py for hashing
+
 These do not need a makefile, on linux just ...
 
 make checkblake
