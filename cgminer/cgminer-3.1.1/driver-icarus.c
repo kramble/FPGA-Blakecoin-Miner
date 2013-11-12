@@ -280,10 +280,9 @@ static int icarus_gets(unsigned char *buf, int fd, struct timeval *tv_finish, st
 
 static int icarus_write(int fd, const void *buf, size_t bufLen)
 {
-        size_t ret;
+	size_t ret;
 	char tmpbuf[256];
-	char *srcbuf = buf;
-	char *hexstr;
+	const char *srcbuf = buf;
 	if (bufLen != 64)
 	{
 		applog(LOG_ERR, "Bad bufLen in write_icarus");
@@ -294,15 +293,18 @@ static int icarus_write(int fd, const void *buf, size_t bufLen)
 	memcpy(tmpbuf+20,srcbuf,32);
 	bufLen = 52;
 
+#if 0
+	char *hexstr;
 	hexstr = bin2hex(tmpbuf, bufLen);
 	applog(LOG_DEBUG, "icarus_write %s", hexstr);
-	// free(hexstr);	// TODO free it
+	free(hexstr);
+#endif
 
-        ret = write(fd, tmpbuf, bufLen);	// NB tmpbuf not buf
-        if (unlikely(ret != bufLen))
-                return 1;
+	ret = write(fd, tmpbuf, bufLen);	// NB tmpbuf not buf
+	if (unlikely(ret != bufLen))
+		return 1;
 
-        return 0;
+	return 0;
 }
 
 static int OLD_icarus_write(int fd, const void *buf, size_t bufLen)

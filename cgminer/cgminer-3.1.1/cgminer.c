@@ -1431,49 +1431,71 @@ void blake256_regenhash(struct work *work)
         uint32_t *ohash = (uint32_t *)(work->hash);
 
         // be32enc_vect(data, (const uint32_t *)work->data, 19);
-	flip80(data, work->data);
+        flip80(data, work->data);
 
         data[19] = htobe32(*nonce);
 
+#if 0
         applog(LOG_DEBUG, "timestamp %d", data[17]);
 
         applog(LOG_DEBUG, "Dat0: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x", data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
             data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19]);
+#endif
 
-    sph_blake256_context     ctx_blake;
+    sph_blake256_context ctx_blake;
     sph_blake256_init(&ctx_blake);
     sph_blake256 (&ctx_blake, (unsigned char *)data, 80);
     sph_blake256_close(&ctx_blake, (unsigned char *)ohash);
+}
 
-    // uint32_t *o = ohash;
-    // memcpy(work->hash1, work->hash, 32); // OOPS no such thing as hash1
+// Moved from driver_ztex.c for blake
+uint32_t ztex_checkNonce(struct work *work, uint32_t nonce)
+{
+	uint32_t *data32 = (uint32_t *)(work->data);
+	unsigned char swap[80];
+	uint32_t *swap32 = (uint32_t *)swap;
+	unsigned char hash1[32];
+	unsigned char hash2[32];
+	uint32_t *hash2_32 = (uint32_t *)hash2;
+	int i;
 
+	swap32[76/4] = htonl(nonce);
+
+	for (i = 0; i < 76 / 4; i++)
+		swap32[i] = swab32(data32[i]);
+
+    sph_blake256_context ctx_blake;
+    sph_blake256_init(&ctx_blake);
+    sph_blake256 (&ctx_blake, (unsigned char *)swap, 80);
+    sph_blake256_close(&ctx_blake, (unsigned char *)hash2);
+
+	// applog(LOG_DEBUG, "nonce %08x hash %08x", nonce, hash2_32[7]);
+
+	return htonl(hash2_32[7]);
 }
 
 static void calc_midstate(struct work *work)
 {
 	unsigned char data[64];
 	uint32_t *data32 = (uint32_t *)data;
-	// sha2_context ctx;
-	char *strdata, *strmidstate;
 
 	flip64(data32, work->data);
 
     sph_blake256_context     ctx_blake;
     sph_blake256_init(&ctx_blake);
     sph_blake256 (&ctx_blake, (unsigned char *)data, 64);
-    // sph_blake256_close(&ctx_blake, (unsigned char *)ohash);
-
-	// sha2_starts(&ctx);
-	// sha2_update(&ctx, data, 64);
 
 	memcpy(work->midstate, ctx_blake.H, 32);
 	endian_flip32(work->midstate, work->midstate);
 
+#if 0
+	char *strdata, *strmidstate;
 	strdata = bin2hex(work->data, 80);
 	strmidstate = bin2hex(work->midstate, 32);
 	applog(LOG_DEBUG, "data %s midstate %s", strdata, strmidstate);
-	// free(strdata); free(strmidstate);	// TODO
+	free(strdata);
+	free(strmidstate);
+#endif
 }
 
 static void OLD_calc_midstate(struct work *work)
@@ -1811,12 +1833,14 @@ static bool getwork_decode(json_t *res_val, struct work *work)
 	}
 
 	if (!jobj_binary(res_val, "midstate", work->midstate, sizeof(work->midstate), false)) {
-
-		applog(LOG_DEBUG, "Calculating midstate locally - UNEXPECTED kramble");
-}
-	if (1) {	// kramble
 		// Calculate it ourselves
 		applog(LOG_DEBUG, "Calculating midstate locally");
+		calc_midstate(work);
+	}
+	else
+	{
+		// ALWAYS calculate midstate for blake - NB retain call to jobj_binary() above in case of side-effects
+		applog(LOG_DEBUG, "Calculating midstate locally for blake");
 		calc_midstate(work);
 	}
 
@@ -3253,10 +3277,13 @@ static void rebuild_hash(struct work *work)
 		// regen_hash(work);
 		blake256_regenhash(work);
 
+#if 0
 	char *datastr = bin2hex(work->data, 80);
 	char *hashstr = bin2hex(work->hash, 32);
 
-	applog(LOG_DEBUG, "data %s hash %s", datastr, hashstr);
+	// applog(LOG_WARNING, "data %s hash %s", datastr, hashstr);
+	applog(LOG_WARNING, "hash %s", hashstr);
+#endif
 
 	work->share_diff = share_diff(work);
 	if (unlikely(work->share_diff >= current_diff)) {
