@@ -45,18 +45,22 @@ module ztex_ufm1_15y1 (fxclk_in, reset, select, clk_reset, pll_stop,  dcm_progcl
           .O(fxclk)
         );
 
-	BUFG bufg_clk (
 `ifndef NOPLL
+	BUFG bufg_clk (
           .I(pll_clk0),
-`else
-          .I(dcm_clk),
-`endif
           .O(clk)
         );
+`else
+	BUFGCE bufg_clk (
+          .I(dcm_clk),
+          .CE(~pll_reset),
+          .O(clk)
+        );
+`endif
 
 		DCM_CLKGEN #(
 			.CLKFX_DIVIDE(4),
-			.CLKFX_MULTIPLY(16),		// Reduce from 32 to 16 since using TS_clk
+			.CLKFX_MULTIPLY(16),		// Reduce from 32 to 16 since now using TS_clk
 			.CLKFXDV_DIVIDE(2),			// NB using CLKFXDV output
 			.CLKIN_PERIOD(20.8333)		// 48MHz input
 		) 
