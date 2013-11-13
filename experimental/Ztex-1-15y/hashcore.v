@@ -35,6 +35,7 @@ module hashcore (hash_clk, reset, midstate, data, nonce, golden_nonce, golden_no
 
 	always @ (posedge hash_clk)
 	begin
+		golden_nonce_match <= 1'b0;
 		if (reset)
 		begin
 			golden_nonce <= 32'd0;
@@ -42,7 +43,6 @@ module hashcore (hash_clk, reset, midstate, data, nonce, golden_nonce, golden_no
 		end
 		else
 		begin
-			golden_nonce_match <= 1'b0;
 `ifdef SIM			
 			if (hash7[23:0] == 24'd0)	// Genesis block matches on ba000000
 `else			
