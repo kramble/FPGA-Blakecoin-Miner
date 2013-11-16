@@ -75,6 +75,7 @@ ASSERT1(sizeof(uint32_t) == 4);
 #define TIME_FACTOR 10
 // It's 10 per second, thus value = 10/TIME_FACTOR =
 #define ICARUS_READ_FAULT_DECISECONDS 1
+//#define ICARUS_READ_FAULT_DECISECONDS 200			// KRAMBLE fudge this for testing
 
 // In timing mode: Default starting value until an estimate can be obtained
 // 5 seconds allows for up to a ~840MH/s device
@@ -278,11 +279,13 @@ static int icarus_gets(unsigned char *buf, int fd, struct timeval *tv_finish, st
 	}
 }
 
-static int icarus_write(int fd, const void *buf, size_t bufLen)
+static int icarus_write_84byteprotocol(int fd, const void *buf, size_t bufLen)
 {
+	// KRAMBLE This version is needed for the 84 byte protocol lancelot bitstreams (dynamic clock set by target)
 	size_t ret;
 	char tmpbuf[256];
 	const char *srcbuf = buf;
+
 	if (bufLen != 64)
 	{
 		applog(LOG_ERR, "Bad bufLen in write_icarus");
@@ -307,7 +310,7 @@ static int icarus_write(int fd, const void *buf, size_t bufLen)
 	return 0;
 }
 
-static int OLD_icarus_write(int fd, const void *buf, size_t bufLen)
+static int icarus_write(int fd, const void *buf, size_t bufLen)
 {
 	size_t ret;
 
@@ -546,18 +549,19 @@ static bool icarus_detect_one(const char *devpath)
 	struct timeval tv_start, tv_finish;
 	int fd;
 
-	// Block 171874 nonce = (0xa2870100) = 0x000187a2
-	// N.B. golden_ob MUST take less time to calculate
-	//	than the timeout set in icarus_open()
-	//	This one takes ~0.53ms on Rev3 Icarus
+	/* Blakecoin detection hash
+	N.B. golden_ob MUST take less time to calculate than the timeout set in icarus_open()
+    0000007002685447273026edebf62cf5e17454f35cc7b1f2da57caeb008cf4fb00000000dad683f2975c7e00a8088275099c69a3c589916aaa9c7c2501d136c1bf78422d5256fbaa1c01d9d1b48b4600000000800000000000000000000000000000000000000000000000000000000000000000000000000000000080020000
+	{ midstate, data } = { 256'h553bf521cf6f816d21b2e3c660f29469f8b6ae935291176ef5dda6fe442ca6e4, 96'hd1d9011caafb56522d4278bf };
+	*/
 	const char golden_ob[] =
-		"4679ba4ec99876bf4bfe086082b40025"
-		"4df6c356451471139a3afa71e48f544a"
+		"553bf521cf6f816d21b2e3c660f29469"
+		"f8b6ae935291176ef5dda6fe442ca6e4"
 		"00000000000000000000000000000000"
-		"0000000087320b1a1426674f2fa722ce";
+		"00000000d1d9011caafb56522d4278bf";
 
-	const char golden_nonce[] = "000187a2";
-	const uint32_t golden_nonce_val = 0x000187a2;
+	const char golden_nonce[] = "00468bb4";
+	const uint32_t golden_nonce_val = 0x00468bb4;
 
 	unsigned char ob_bin[64], nonce_bin[ICARUS_READ_SIZE];
 	char *nonce_hex;
@@ -589,8 +593,10 @@ static bool icarus_detect_one(const char *devpath)
 			"Icarus Detect: "
 			"Test failed at %s: get %s, should: %s",
 			devpath, nonce_hex, golden_nonce);
-		// free(nonce_hex);
-		// return false;
+#if 1	// KRAMBLE Set 0 to DISABLE TEST
+		free(nonce_hex);
+		return false;
+#endif
 	}
 	applog(LOG_DEBUG,
 		"Icarus Detect: "
@@ -773,6 +779,11 @@ static int64_t icarus_scanhash(struct thr_info *thr, struct work *work,
 #if !defined (__BIG_ENDIAN__) && !defined(MIPSEB)
 	nonce = swab32(nonce);
 #endif
+
+	// KRAMBLE copy the LOG_DEBUG from below as LOG_WARNING
+	applog(LOG_WARNING, "Icarus %d nonce = 0x%08x = 0x%08lX hashes (%ld.%06lds)",
+				icarus->device_id, nonce, (long unsigned int)hash_count,
+				elapsed.tv_sec, elapsed.tv_usec);
 
 	curr_hw_errors = icarus->hw_errors;
 	submit_nonce(thr, work, nonce);
