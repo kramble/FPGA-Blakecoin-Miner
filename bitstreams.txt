@@ -51,16 +51,22 @@ NB This is an initial bitstream, tested and working. Default clock is 50MHz.
 Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending
 on the actual device manufacturing and operating temperature.
 
+experimental/Ztex-1-15y
+-----------------------
+https://www.dropbox.com/s/vk3k5sb64b8641o/ztex_ufm1_15y1-v06ad-2core-ucf-140MHz-fmax-147-fixed.bit
+
+Runs at around 200MHz using my modified blake version of cgminer.
+
 windows binaries for use with MiningSoftware
 --------------------------------------------
-
+These are no longer needed for the current blakeminer.py ...
 https://www.dropbox.com/s/j3drv4flzuljywh/checkblake.exe
 https://www.dropbox.com/s/o83n32w9i3l7w89/midstate.exe
 
 ===================================================================================
-You'll need a Xilinx JTAG platform cable. The official one is very expensive, cheap
-clones are available on ebay, or if you can do electronics a parallel-port adapter
-can be built for just a few dollars.
+You'll need a Xilinx JTAG platform cable for the Lancelot port. The official one is
+very expensive, cheap clones are available on ebay, or if you can do electronics a
+parallel-port adapter can be built for just a few dollars.
 
 You'll also need IMPACT from the xilinx ISE to program. Download and install the
 full version (not Webpack). No licence is needed to run IMPACT, at least for ISE
