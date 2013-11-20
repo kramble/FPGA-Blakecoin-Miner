@@ -139,6 +139,7 @@ bool opt_delaynet;
 bool opt_disable_pool;
 char *opt_icarus_options = NULL;
 char *opt_icarus_timing = NULL;
+char *opt_ztex_clock = NULL;		// KRAMBLE
 bool opt_worktime;
 #ifdef USE_AVALON
 char *opt_avalon_options = NULL;
@@ -845,6 +846,15 @@ static char *set_icarus_timing(const char *arg)
 }
 #endif
 
+#ifdef USE_ZTEX
+static char *set_ztex_clock(const char *arg)	// KRAMBLE
+{
+	opt_set_charp(arg, &opt_ztex_clock);
+
+	return NULL;
+}
+#endif
+
 #ifdef USE_AVALON
 static char *set_avalon_options(const char *arg)
 {
@@ -1007,6 +1017,11 @@ static struct opt_table opt_config_table[] = {
 		     opt_hidden),
 	OPT_WITH_ARG("--icarus-timing",
 		     set_icarus_timing, NULL, NULL,
+		     opt_hidden),
+#endif
+#ifdef USE_ZTEX
+	OPT_WITH_ARG("--ztex-clock",				// KRAMBLE
+		     set_ztex_clock, NULL, NULL,
 		     opt_hidden),
 #endif
 #ifdef USE_AVALON
@@ -4162,6 +4177,8 @@ void write_config(FILE *fcfg)
 		fprintf(fcfg, ",\n\"icarus-options\" : \"%s\"", json_escape(opt_icarus_options));
 	if (opt_icarus_timing)
 		fprintf(fcfg, ",\n\"icarus-timing\" : \"%s\"", json_escape(opt_icarus_timing));
+	if (opt_ztex_clock)
+		fprintf(fcfg, ",\n\"ztex-clock\" : \"%s\"", json_escape(opt_ztex_clock));	// KRAMBLE
 #ifdef USE_USBUTILS
 	if (opt_usb_select)
 		fprintf(fcfg, ",\n\"usb\" : \"%s\"", json_escape(opt_usb_select));

@@ -677,14 +677,32 @@ int libztex_prepare_device(struct libusb_device *dev, struct libztex_device** zt
 	// For Blake OVERRIDE firmware configuration of clock speeds since we run slightly slower
 	// NB These are set in ztex_ufm1_15y1.c, with units of 4MHz
 	// Min clock is hardcoded as 25 (100MHz) in the firmware, max is freqMaxM = 62 (248MHz), default freqM = 50 (200MHz)
+	// NB option zetx_clock will override freqM and freqMaxM
 	
 	newdev->numNonces = buf[1] + 1;
 	newdev->offsNonces = ((buf[2] & 255) | ((buf[3] & 255) << 8)) - 10000;
 	newdev->freqM1 = ((buf[4] & 255) | ((buf[5] & 255) << 8) ) * 0.01;
+
+	// ORIGINAL
 	// newdev->freqMaxM = (buf[7] & 255);
-	newdev->freqMaxM = 50;	// OVERRIDE set max 200MHz
 	// newdev->freqM = (buf[6] & 255);
-	newdev->freqM = 30;		// OVERRIDE set initial 120MHz
+
+#if 0	// FIXED CLOCK
+	newdev->freqMaxM = 44;					// OVERRIDE set max 180MHz
+	// newdev->freqMaxM = 46;				// OVERRIDE set max 188MHz
+	// newdev->freqMaxM = 48;				// OVERRIDE set max 196MHz
+	// newdev->freqMaxM = 50;				// OVERRIDE set max 204MHz
+	// newdev->freqMaxM = 51;				// OVERRIDE set max 208MHz
+	// newdev->freqMaxM = 52;				// OVERRIDE set max 212MHz
+	// newdev->freqMaxM = 54;				// OVERRIDE set max 220MHz
+	newdev->freqM = newdev->freqMaxM;		// Initial is same as max
+#endif
+
+#if 1	// PRODUCTION
+	newdev->freqMaxM = 54;					// OVERRIDE set max 220MHz
+	newdev->freqM = 42;						// OVERRIDE set initial 172MHz
+#endif
+
 	newdev->freqMDefault = newdev->freqM;
 	newdev->suspendSupported = (buf[0] == 5);
 	newdev->hashesPerClock = buf[0] > 2? (((buf[8] & 255) | ((buf[9] & 255) << 8)) + 1) / 128.0: 1.0;

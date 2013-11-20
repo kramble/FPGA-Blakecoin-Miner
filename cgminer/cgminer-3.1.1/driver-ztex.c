@@ -34,6 +34,8 @@
 
 struct device_drv ztex_drv;
 
+static int option_offset = -1;		// KRAMBLE used for ztex_clock option
+
 // Forward declarations
 static void ztex_disable(struct thr_info* thr);
 static bool ztex_prepare(struct thr_info *thr);
@@ -144,20 +146,6 @@ static bool ztex_updateFreq(struct libztex_device* ztex)
 		       ztex->repr, (1.0 - 1.0 * bestM / maxM) * 100);
 		return false;
 	}
-	/* It works, but some time later starts reconfiguring every scan cycle !!
-	else if ((bestM < (1.0 - LIBZTEX_OVERHEATTHRESHOLD/2) * maxM) && bestM < maxM - 1) {
-		// Try reloading the bitstream
-		ztex_selectFpga(ztex);
-		libztex_resetFpga(ztex);
-		if (libztex_configureFpga(ztex) != 0) {
-			libztex_resetFpga(ztex);
-			ztex_releaseFpga(ztex);
-			applog(LOG_ERR, "%s: Disabling!", ztex->repr);
-			return false;
-		}
-		ztex_releaseFpga(ztex);
-	}
-	*/
 
 	return true;
 }
@@ -249,10 +237,6 @@ static int64_t ztex_scanhash(struct thr_info *thr, struct work *work,
 	int validNonces = 0;
 	double errorCount = 0;
 
-	int overErrors = 0;		// KRAMBLE added as workaround for lockup on setting freq. This seems to happen
-	int overErrorsFlag = 0;	// when all the fpgas reset freq at the same time, probably a race on the select
-							// and clk_reset / pll_stop signals
-	
 	applog(LOG_DEBUG, "%s: entering poll loop", ztex->repr);
 	while (!(overflow || thr->work_restart)) {
 		count++;
@@ -301,62 +285,22 @@ static int64_t ztex_scanhash(struct thr_info *thr, struct work *work,
 				noncecnt = nonce;
 			// KRAMBLE don't overflow if nonce == 0 (eg on lockup)
 			if ( (((0xffffffff - nonce) < (nonce - lastnonce[i])) || nonce < lastnonce[i]) && nonce ) {
-				applog(LOG_WARNING, "%s: overflow nonce=%08x lastnonce=%08x", ztex->repr, nonce, lastnonce[i]);
+				// applog(LOG_WARNING, "%s: overflow nonce=%08x lastnonce=%08x", ztex->repr, nonce, lastnonce[i]);
+				applog(LOG_DEBUG, "%s: overflow nonce=%08x lastnonce=%08x", ztex->repr, nonce, lastnonce[i]);
 				overflow = true;
 			} else
 				lastnonce[i] = nonce;
 
 			if (ztex_checkNonce(work, nonce) != (hdata->hash7)) {
-				applog(LOG_WARNING, "%s: checkNonce failed for %08X", ztex->repr, nonce);
+				// applog(LOG_WARNING, "%s: checkNonce failed for %08X", ztex->repr, nonce);		// KRAMBLE not in production ??
+				applog(LOG_DEBUG, "%s: checkNonce failed for %08X", ztex->repr, nonce);
 
 				// do not count errors in the first 500ms after sendHashData (2x250 wait time)
 				if (count > 2) {
 				
-					// KRAMBLE the error handling may work for the bitcoin bitstream but its just
-					// plain broken on my bitstream, so disable it until we've determined max freq.
-					if (ztex->enableErrors)
-					{
-						thr->cgpu->hw_errors++;
-						errorCount += (1.0 / ztex->numNonces);
-					}
-					overErrors++;	// kramble added as workaround for lockup on setting freq
+					thr->cgpu->hw_errors++;
+					errorCount += (1.0 / ztex->numNonces);
 				}
-
-				// KRAMBLE added as workaround for lockup on setting freq
-				if (overErrors > 4)
-				{
-					if (overErrorsFlag)
-					{
-						if (overErrors > 6)		// Don't make this to high or we restart scan before it can trigger
-						{
-							applog(LOG_WARNING, "%s: high HW error rate RECONFIGURE", ztex->repr);
-							// Unfortunately the device can completely lock up so try reloading bitstream
-							ztex_selectFpga(ztex);
-							libztex_resetFpga(ztex);
-							libztex_configureFpga(ztex);
-							ztex->freqM -= 1;				// Drop back one
-							ztex->freqMaxM = ztex->freqM;	// And set the maximum
-							ztex->enableErrors = 1;			// Enable the error counting henceforth
-							libztex_setFreq(ztex, ztex->freqM);
-							ztex_releaseFpga(ztex);
-							goto overErrors_break;			// Let the error handler deal with it
-						}
-					}
-					else
-					{
-						// Attempt to reset freq, this usually works
-						applog(LOG_WARNING, "%s: high HW error rate, RESET FREQ", ztex->repr);
-
-						ztex_selectFpga(ztex);
-						libztex_setFreq(ztex, ztex->freqM);
-						ztex_releaseFpga(ztex);
-						overErrorsFlag = 1;				// Only try this once, see check above
-						overErrors = 0;
-						// if (!ztex->enableErrors)		// Surfluous since errorCount does not increment
-						//	errorCount = 0.0;			// Reset else it will stop at this frequency
-					}
-				}
-					
 			}
 			else
 				validNonces++;
@@ -381,8 +325,8 @@ static int64_t ztex_scanhash(struct thr_info *thr, struct work *work,
 					}
 				}
 				if (!found) {
-					// applog(LOG_WARNING, "%s: Share found N%dE%d", ztex->repr, i, j);
-					applog(LOG_WARNING, "%s: Share found %08x", ztex->repr, nonce);
+					applog(LOG_WARNING, "%s: Share found %08x", ztex->repr, nonce);		// KRAMBLE useful to show its working
+					applog(LOG_DEBUG, "%s: Share found N%dE%d", ztex->repr, i, j);
 					backlog[backlog_p++] = nonce;
 
 					if (backlog_p >= backlog_max)
@@ -390,14 +334,13 @@ static int64_t ztex_scanhash(struct thr_info *thr, struct work *work,
 
 					work->blk.nonce = 0xffffffff;
 					submit_nonce(thr, work, nonce);
-					applog(LOG_WARNING, "%s: submitted %08x", ztex->repr, nonce);
+					// applog(LOG_WARNING, "%s: submitted %08x", ztex->repr, nonce);
+					applog(LOG_DEBUG, "%s: submitted %08x", ztex->repr, nonce);					
 				}
 			}
 		}
 	}
 
-	overErrors_break:	// Goto target breaks out two levels on overErrors
-	
 	// only add the errorCount if we had at least some valid nonces or
 	// had no valid nonces in the last round
 	if (errorCount > 0.0) {
@@ -416,6 +359,7 @@ static int64_t ztex_scanhash(struct thr_info *thr, struct work *work,
 	if (ztex->errorRate[ztex->freqM] > ztex->maxErrorRate[ztex->freqM])
 		ztex->maxErrorRate[ztex->freqM] = ztex->errorRate[ztex->freqM];
 
+#if 1	// KRAMBLE OPTIONALLY DISABLE
 	if (!ztex_updateFreq(ztex)) {
 		// Something really serious happened, so mark this thread as dead!
 		free(lastnonce);
@@ -423,6 +367,7 @@ static int64_t ztex_scanhash(struct thr_info *thr, struct work *work,
 		
 		return -1;
 	}
+#endif
 
 	applog(LOG_DEBUG, "%s: exit %1.8X", ztex->repr, noncecnt);
 
@@ -452,9 +397,6 @@ static bool ztex_prepare(struct thr_info *thr)
 	get_datestamp(cgpu->init, &now);
 
 	ztex_selectFpga(ztex);
-	// if (ztex->repr[strlen(ztex->repr)-1] == '4')	// KRAMBLE DEBUG only configure #4
-	if (1)
-	{
 	if (libztex_configureFpga(ztex) != 0) {
 		libztex_resetFpga(ztex);
 		ztex_releaseFpga(ztex);
@@ -462,10 +404,94 @@ static bool ztex_prepare(struct thr_info *thr)
 		thr->cgpu->deven = DEV_DISABLED;
 		return true;
 	}
-	}
-	ztex->freqM = ztex->freqMaxM+1;
-	// ztex_updateFreq(ztex);					// KRAMBLE Was already commented out
-	libztex_setFreq(ztex, ztex->freqMDefault);	// KRAMBLE Not required for fixed freq bitstream (BUT v04 is not fixed so reinstate)
+	
+	// KRAMBLE Handle options, based on get_options in driver-icarus.c
+	// Use as --ztex-clock freqM:freqMaxM
+	// Multiple comma separated vaues are allowed eg 160:180,180:184
+
+	{	// Bare block to isolate variables
+
+		char err_buf[BUFSIZ+1];
+		char buf[BUFSIZ+1];
+		char *ptr, *comma, *colon, *colon2;
+		size_t max;
+		int i, tmp;
+
+		int this_option_offset = ++option_offset;
+
+		if (opt_ztex_clock == NULL)
+				buf[0] = '\0';
+		else {
+			ptr = opt_ztex_clock;
+			for (i = 0; i < this_option_offset; i++) {
+				comma = strchr(ptr, ',');
+				if (comma == NULL)
+					break;
+				ptr = comma + 1;
+			}
+
+			comma = strchr(ptr, ',');
+			if (comma == NULL)
+				max = strlen(ptr);
+			else
+				max = comma - ptr;
+
+			if (max > BUFSIZ)
+				max = BUFSIZ;
+			strncpy(buf, ptr, max);
+			buf[max] = '\0';
+		}
+
+
+		if (*buf) {
+			colon = strchr(buf, ':');
+			if (colon)
+				*(colon++) = '\0';
+
+			if (*buf) {
+				tmp = atoi(buf);
+				if (tmp >= 100 && tmp <= 250)
+					ztex->freqM = ztex->freqMDefault = tmp/4 - 1;	// NB 4Mhz units
+				else {
+					sprintf(err_buf, "Invalid ztex_clock must be between 100 and 250", buf);
+					quit(1, err_buf);
+				}
+			}
+
+			if (colon && *colon) {
+				tmp = atoi(colon);
+				if (tmp >= 100 && tmp <= 250) {
+					if (tmp/4 - 1 >= ztex->freqM)
+						ztex->freqMaxM = tmp/4 - 1;	// NB 4Mhz units
+					else
+					{
+						sprintf(err_buf, "Invalid ztex_clock max must be less than min", buf);
+						quit(1, err_buf);
+					}
+				}
+				else {
+					sprintf(err_buf, "Invalid ztex_clock must be between 100 and 250", buf);
+					quit(1, err_buf);
+				}
+			}
+		}
+	
+	}	// End bare block
+	
+	
+	ztex->freqM = ztex->freqMaxM+1;		// KRAMBLE is in original
+	// ztex_updateFreq(ztex);			// KRAMBLE Was already commented out in original
+
+#if 1
+	libztex_setFreq(ztex, ztex->freqMDefault);			// KRAMBLE PRODUCTION CODE
+#else
+	// KRAMBLE build customised settings for a specific board
+	if (ztex->repr[strlen(ztex->repr)-1] == '4')
+		libztex_setFreq(ztex, ztex->freqMDefault-1);	// Run it 4MHz slower
+	else
+		libztex_setFreq(ztex, ztex->freqMDefault);
+#endif
+
 	ztex_releaseFpga(ztex);
 	applog(LOG_DEBUG, "%s: prepare", ztex->repr);
 	return true;

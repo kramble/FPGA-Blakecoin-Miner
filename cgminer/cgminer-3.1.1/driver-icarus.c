@@ -75,7 +75,6 @@ ASSERT1(sizeof(uint32_t) == 4);
 #define TIME_FACTOR 10
 // It's 10 per second, thus value = 10/TIME_FACTOR =
 #define ICARUS_READ_FAULT_DECISECONDS 1
-//#define ICARUS_READ_FAULT_DECISECONDS 200			// KRAMBLE fudge this for testing
 
 // In timing mode: Default starting value until an estimate can be obtained
 // 5 seconds allows for up to a ~840MH/s device
@@ -780,10 +779,8 @@ static int64_t icarus_scanhash(struct thr_info *thr, struct work *work,
 	nonce = swab32(nonce);
 #endif
 
-	// KRAMBLE copy the LOG_DEBUG from below as LOG_WARNING
-	applog(LOG_WARNING, "Icarus %d nonce = 0x%08x = 0x%08lX hashes (%ld.%06lds)",
-				icarus->device_id, nonce, (long unsigned int)hash_count,
-				elapsed.tv_sec, elapsed.tv_usec);
+	// KRAMBLE copy the LOG_DEBUG from below as LOG_WARNING (hash_count & elapsed are always zero)
+	applog(LOG_WARNING, "Icarus %d nonce = 0x%08x", icarus->device_id, nonce);		// KRAMBLE useful to show its working
 
 	curr_hw_errors = icarus->hw_errors;
 	submit_nonce(thr, work, nonce);
