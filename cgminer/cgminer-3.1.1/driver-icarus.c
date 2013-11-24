@@ -208,6 +208,7 @@ static struct ICARUS_INFO **icarus_info;
 // and in the order specified on the command line
 //
 static int option_offset = -1;
+static int clock_offset = -1;		// KRAMBLE
 
 struct device_drv icarus_drv;
 
@@ -319,6 +320,23 @@ static int icarus_write(int fd, const void *buf, size_t bufLen)
 
 	return 0;
 }
+
+// From BFGMiner (for clock speed) ...
+static bool cairnsmore_send_cmd(int fd, uint8_t cmd, uint8_t data, bool probe)
+{
+	unsigned char pkt[64] =
+		"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+		"vdi\xb7"
+		"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+		"bfg0" "\xff\xff\xff\xff" "\xb5\0\0\0";
+	if (unlikely(probe))
+		pkt[61] = '\x01';
+	pkt[32] = 0xda ^ cmd ^ data;
+	pkt[33] = data;
+	pkt[34] = cmd;
+	return write(fd, pkt, sizeof(pkt)) == sizeof(pkt);
+}
+// End BFGMiner
 
 #define icarus_close(fd) close(fd)
 
@@ -540,9 +558,53 @@ static void get_options(int this_option_offset, int *baud, int *work_division, i
 	}
 }
 
+static void get_clocks(int this_option_offset, int *cainsmore_clock)
+{
+	char err_buf[BUFSIZ+1];
+	char buf[BUFSIZ+1];
+	char *ptr, *comma;
+	size_t max;
+	int i, tmp;
+
+	if (opt_cainsmore_clock == NULL)
+		buf[0] = '\0';
+	else {
+		ptr = opt_cainsmore_clock;
+		for (i = 0; i < this_option_offset; i++) {
+			comma = strchr(ptr, ',');
+			if (comma == NULL)
+				break;
+			ptr = comma + 1;
+		}
+
+		comma = strchr(ptr, ',');
+		if (comma == NULL)
+			max = strlen(ptr);
+		else
+			max = comma - ptr;
+
+		if (max > BUFSIZ)
+			max = BUFSIZ;
+		strncpy(buf, ptr, max);
+		buf[max] = '\0';
+	}
+
+	if (*buf) {
+		tmp = atoi(buf);
+
+		if (tmp >= 50 && tmp <= 220)
+				*cainsmore_clock = tmp * 2 / 5;	// NB 2.5Mhz units
+			else {
+				sprintf(err_buf, "Invalid cainsmore-clock must be between 100 and 250", buf);
+				quit(1, err_buf);
+			}
+	}
+}
+
 static bool icarus_detect_one(const char *devpath)
 {
 	int this_option_offset = ++option_offset;
+	int this_clock_offset = ++clock_offset;
 
 	struct ICARUS_INFO *info;
 	struct timeval tv_start, tv_finish;
@@ -569,6 +631,10 @@ static bool icarus_detect_one(const char *devpath)
 
 	get_options(this_option_offset, &baud, &work_division, &fpga_count);
 
+	int cainsmore_clock_speed = 70;		// KRAMBLE 175MHz default
+	get_clocks(this_option_offset, &cainsmore_clock_speed);
+	// applog(LOG_INFO, "cainsmore set clock: %dMHz", cainsmore_clock_speed * 5 / 2);	// Works, but crashes !!
+
 	applog(LOG_DEBUG, "Icarus Detect: Attempting to open %s", devpath);
 
 	fd = icarus_open2(devpath, baud, true);
@@ -584,7 +650,23 @@ static bool icarus_detect_one(const char *devpath)
 	memset(nonce_bin, 0, sizeof(nonce_bin));
 	icarus_gets(nonce_bin, fd, &tv_finish, NULL, 1);
 
-	icarus_close(fd);
+	// KRAMBLE Attempt to set clock speed before closing
+	// NB Do this here, not after the test for icarus detect else we cannot send
+	// 	  a lower clock speed to a device that is running too fast.
+	
+	// Units 2.5MHz Min 20, Max 88
+
+	// Now taken from opt_cainsmore_clock above
+	// int cainsmore_clock_speed = 70;		// 175MHz (KRAMBLE default)
+	// int cainsmore_clock_speed = 76;		// 190MHz
+	// int cainsmore_clock_speed = 78;		// 195MHz
+	// int cainsmore_clock_speed = 80;		// 200MHz
+	// int cainsmore_clock_speed = 84;		// 210MHz
+
+	int cainsmore_ret = cairnsmore_send_cmd(fd, 0, cainsmore_clock_speed, false);
+	// applog(LOG_ERR, "cainsmore set clock: %s", cainsmore_ret ? "true" : "false");	// Works, but crashes !!
+
+	icarus_close(fd);	// KRAMBLE MOVED below (2 places)
 
 	nonce_hex = bin2hex(nonce_bin, sizeof(nonce_bin));
 	if (strncmp(nonce_hex, golden_nonce, 8)) {
@@ -779,8 +861,9 @@ static int64_t icarus_scanhash(struct thr_info *thr, struct work *work,
 	nonce = swab32(nonce);
 #endif
 
-	// KRAMBLE copy the LOG_DEBUG from below as LOG_WARNING (hash_count & elapsed are always zero)
-	applog(LOG_WARNING, "Icarus %d nonce = 0x%08x", icarus->device_id, nonce);		// KRAMBLE useful to show its working
+	// KRAMBLE copy the LOG_DEBUG from below as LOG_WARNING (hash_count & elapsed are always zero) and reformat
+	// to match the zted message (this is useful to show its working as accept rate is dismal when solo mining)
+	applog(LOG_WARNING, "Icarus %d: Share found %08x", icarus->device_id, nonce);
 
 	curr_hw_errors = icarus->hw_errors;
 	submit_nonce(thr, work, nonce);

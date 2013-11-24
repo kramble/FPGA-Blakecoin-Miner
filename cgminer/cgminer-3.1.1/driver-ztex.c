@@ -453,7 +453,7 @@ static bool ztex_prepare(struct thr_info *thr)
 				if (tmp >= 100 && tmp <= 250)
 					ztex->freqM = ztex->freqMDefault = tmp/4 - 1;	// NB 4Mhz units
 				else {
-					sprintf(err_buf, "Invalid ztex_clock must be between 100 and 250", buf);
+					sprintf(err_buf, "Invalid ztex-clock must be between 100 and 250", buf);
 					quit(1, err_buf);
 				}
 			}
@@ -465,12 +465,12 @@ static bool ztex_prepare(struct thr_info *thr)
 						ztex->freqMaxM = tmp/4 - 1;	// NB 4Mhz units
 					else
 					{
-						sprintf(err_buf, "Invalid ztex_clock max must be less than min", buf);
+						sprintf(err_buf, "Invalid ztex-clock max must be less than min", buf);
 						quit(1, err_buf);
 					}
 				}
 				else {
-					sprintf(err_buf, "Invalid ztex_clock must be between 100 and 250", buf);
+					sprintf(err_buf, "Invalid ztex-clock must be between 100 and 250", buf);
 					quit(1, err_buf);
 				}
 			}
