@@ -5388,12 +5388,10 @@ static struct work *clone_work(struct work *work)
 	return work;
 }
 
+// KRAMBLE blakecoin version for stratum
 static void gen_hash(unsigned char *data, unsigned char *hash, int len)
 {
-	unsigned char hash1[32];
-
-	sha2(data, len, hash1);
-	sha2(hash1, 32, hash);
+	sha2(data, len, hash);
 }
 
 /* Diff 1 is a 256 bit unsigned integer of
@@ -5603,6 +5601,11 @@ void submit_nonce(struct thr_info *thr, struct work *work, uint32_t nonce)
 	flip32(hash2_32, work->hash);
 
 	diff1targ = opt_scrypt ? 0x0000ffffUL : 0;
+
+	// KRAMBLE from kr105 github ...
+	// if	(opt_blake256)				// KRAMBLE except I'm not using opt_blake256, so make it unconditional
+		diff1targ = 0x000000ffUL;
+	
 	if (be32toh(hash2_32[7]) > diff1targ) {
 		applog(LOG_WARNING, "%s%d: invalid nonce - HW error",
 				thr->cgpu->drv->name, thr->cgpu->device_id);
@@ -5687,10 +5690,12 @@ static void hash_sole_work(struct thr_info *mythr)
 			break;
 		}
 		work->device_diff = MIN(drv->working_diff, work->work_difficulty);
+
 #ifdef USE_SCRYPT
 		/* Dynamically adjust the working diff even if the target
 		 * diff is very high to ensure we can still validate scrypt is
 		 * returning shares. */
+		 
 		if (opt_scrypt) {
 			double wu;
 
