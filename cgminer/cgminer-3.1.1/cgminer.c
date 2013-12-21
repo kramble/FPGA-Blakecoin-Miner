@@ -1599,6 +1599,7 @@ static void __build_gbt_coinbase(struct pool *pool)
 }
 
 static void gen_hash(unsigned char *data, unsigned char *hash, int len);
+static void gen_hashd(unsigned char *data, unsigned char *hash, int len);
 
 /* Process transactions with GBT by storing the binary value of the first
  * transaction, and the hashes of the remaining transactions since these
@@ -5394,6 +5395,14 @@ static void gen_hash(unsigned char *data, unsigned char *hash, int len)
 	sha2(data, len, hash);
 }
 
+static void gen_hashd(unsigned char *data, unsigned char *hash, int len)
+{
+	unsigned char hash1[32];
+
+	sha2(data, len, hash1);
+	sha2(hash1, 32, hash);
+}
+
 /* Diff 1 is a 256 bit unsigned integer of
  * 0x00000000ffff0000000000000000000000000000000000000000000000000000
  * so we use a big endian 64 bit unsigned integer centred on the 5th byte to
@@ -5475,7 +5484,7 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
 
 		hex2bin(merkle_bin, pool->swork.merkle[i], 32);
 		memcpy(merkle_sha + 32, merkle_bin, 32);
-		gen_hash(merkle_sha, merkle_root, 64);
+		gen_hashd(merkle_sha, merkle_root, 64);
 		memcpy(merkle_sha, merkle_root, 32);
 	}
 	data32 = (uint32_t *)merkle_sha;
@@ -5602,10 +5611,6 @@ void submit_nonce(struct thr_info *thr, struct work *work, uint32_t nonce)
 
 	diff1targ = opt_scrypt ? 0x0000ffffUL : 0;
 
-	// KRAMBLE from kr105 github ...
-	// if	(opt_blake256)				// KRAMBLE except I'm not using opt_blake256, so make it unconditional
-		diff1targ = 0x000000ffUL;
-	
 	if (be32toh(hash2_32[7]) > diff1targ) {
 		applog(LOG_WARNING, "%s%d: invalid nonce - HW error",
 				thr->cgpu->drv->name, thr->cgpu->device_id);

@@ -16,7 +16,9 @@ NB Opencl should be disabled in the configuration (it may work, but I've not tes
 CFLAGS="-O2" ./configure --enable-ztex --enable-icarus --disable-opencl
 
 Prebuit windows binary (pool mining) at ...
-https://www.dropbox.com/s/7nufm2dhe4csrs6/cgminer.exe
+https://www.dropbox.com/s/f34zwu3oek0rj4m/cgminer.exe (fixes H-not-zero error)
+
+OLD pool version (4) at https://www.dropbox.com/s/7nufm2dhe4csrs6/cgminer.exe
 
 Prebuit windows binary (solo mining only) at ...
 Third version at https://www.dropbox.com/s/51p61kk5rfjpkyz/cgminer.exe
