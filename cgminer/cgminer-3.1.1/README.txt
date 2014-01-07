@@ -67,5 +67,13 @@ NB Note the typo --cainsmore-clock rather than --cairnsmore-clock. This is not y
 cgminer code, so take care with the spelling, sorry).
 The clock resolution is 2.5MHz (rounds down) and the valid range is 50MHz to 220MHz.
 If --cainsmore-clock is not used the default is 175MHz
+Experiment with --icarus-timing to tune for best results (see Lancelot below, but the CM1
+timings will be different since the hashvoodo configuration does not chain FPGA pairs).
+
+Lancelot
+An experimental Lancelot driver can be enabled by uncommenting the #define LANCELOT_52
+macro at the top of driver-icarus.c - NB This will break support the CM1.
+Note that setting clock speed is not supported, so you will still need to use the python
+script to set the initial clock speed after initializing the bitstream.
 You should use --icarus-timing to tune for best results, use a very short work refresh
 interval, eg --icarus-timing 1.0=20 (20 deciseconds = two seconds refresh).

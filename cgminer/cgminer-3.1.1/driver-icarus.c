@@ -29,6 +29,8 @@
  *      nonce range is completely calculated.
  */
 
+//#define LANCELOT_52	// Use Lancelot 52 byte protocol (NB this breaks CM1)
+
 #include "config.h"
 #include "miner.h"
 
@@ -310,6 +312,38 @@ static int icarus_write_84byteprotocol(int fd, const void *buf, size_t bufLen)
 	return 0;
 }
 
+#ifdef LANCELOT_52
+// Lancelot 52 byte protocol (NB does NOT set clock speed in target)
+static int icarus_write(int fd, const void *buf, size_t bufLen)
+{
+        size_t ret;
+	char tmpbuf[256];
+	char *srcbuf = buf;
+	char *hexstr;
+	if (bufLen != 64)
+	{
+		applog(LOG_ERR, "Bad bufLen in write_icarus");
+		return 1;
+	}
+	memset(tmpbuf,0,8);
+	memcpy(tmpbuf+8,srcbuf+52,12);
+	memcpy(tmpbuf+20,srcbuf,32);
+	bufLen = 52;
+
+	// hexstr = bin2hex(tmpbuf, bufLen);
+	// applog(LOG_DEBUG, "icarus_write %s", hexstr);
+	// free(hexstr);	// TODO free it
+
+        ret = write(fd, tmpbuf, bufLen);	// NB tmpbuf not buf
+        if (unlikely(ret != bufLen))
+                return 1;
+
+        return 0;
+}
+
+#else
+
+// CM1 ...
 static int icarus_write(int fd, const void *buf, size_t bufLen)
 {
 	size_t ret;
@@ -320,6 +354,7 @@ static int icarus_write(int fd, const void *buf, size_t bufLen)
 
 	return 0;
 }
+#endif
 
 // From BFGMiner (for clock speed) ...
 static bool cairnsmore_send_cmd(int fd, uint8_t cmd, uint8_t data, bool probe)
@@ -663,8 +698,10 @@ static bool icarus_detect_one(const char *devpath)
 	// int cainsmore_clock_speed = 80;		// 200MHz
 	// int cainsmore_clock_speed = 84;		// 210MHz
 
+#ifndef LANCELOT_52	// Do NOT use cairnsmore_send_cmd for lancelot
 	int cainsmore_ret = cairnsmore_send_cmd(fd, 0, cainsmore_clock_speed, false);
 	// applog(LOG_ERR, "cainsmore set clock: %s", cainsmore_ret ? "true" : "false");	// Works, but crashes !!
+#endif
 
 	icarus_close(fd);	// KRAMBLE MOVED below (2 places)
 
