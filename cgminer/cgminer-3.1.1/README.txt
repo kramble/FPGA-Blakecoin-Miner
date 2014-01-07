@@ -56,12 +56,16 @@ the icarus options so with luck it will be OK.
 The clock resolution is 4MHz (rounds down) and the valid range is 100MHz to 250MHz.
 If --ztex-clock is not used the default range is 172MHz to 220MHz.
 
-Cainsmore
-Cainsmore CM1 will be detected as icarus
+Cairnsmore
+Cairnsmore CM1 will be detected as icarus
 Use the -S option eg.  -S \\.\COM20 -S \\.\COM21 -S \\.\COM22 -S \\.\COM23 
 It will not work for my current lancelot bitstream, use the python miner instead.
 Clock speed can be set with --cainsmore-clock which takes a single value eg
 --cainsmore-clock 200				sets all devices to 200MHz
 --cainsmore-clock 200,210,190,195	sets individual device speeds
+NB Note the typo --cainsmore-clock rather than --cairnsmore-clock. This is not yet fixed in the
+cgminer code, so take care with the spelling, sorry).
 The clock resolution is 2.5MHz (rounds down) and the valid range is 50MHz to 220MHz.
 If --cainsmore-clock is not used the default is 175MHz
+You should use --icarus-timing to tune for best results, use a very short work refresh
+interval, eg --icarus-timing 1.0=20 (20 deciseconds = two seconds refresh).
