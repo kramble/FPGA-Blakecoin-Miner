@@ -14,20 +14,22 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, see http://www.gnu.org/licenses/.
+   
+   Changes for Blakecoin Copyright (C) 2014 kramble, hal7.
 !*/
 
-module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_progdata, dcm_progen,  rd_clk, wr_clk, wr_start, read, write);
+module ztex_ufm1_15d4 (fxclk_in, reset,         clk_reset, pll_stop,  dcm_progclk, dcm_progdata, dcm_progen,  rd_clk, wr_clk, wr_start, read, write);
 
-	input fxclk_in, reset, clk_reset, pll_stop, dcm_progclk, dcm_progdata, dcm_progen, rd_clk, wr_clk, wr_start;
-	
+	input fxclk_in,         reset, clk_reset, pll_stop, dcm_progclk, dcm_progdata, dcm_progen, rd_clk, wr_clk, wr_start;
 	input [7:0] read;
 	output [7:0] write;
 
 	reg [3:0] rd_clk_b, wr_clk_b;
-	reg wr_start_b1 = 0, wr_start_b2 = 0, reset_buf = 0, reset_buf_d = 0, clk_reset_buf = 1, pll_stop_buf = 1;
-	reg phase = 0;
+	reg wr_start_b1 = 0, wr_start_b2 = 0, reset_buf = 0, reset_buf_d = 0, phase = 0;
+	
 	reg dcm_progclk_buf, dcm_progdata_buf, dcm_progen_buf;
 	reg [4:0] wr_delay;
+
 	reg [127:0] outbuf;
 	reg [7:0] read_buf, write_buf;
 	reg [31:0] golden_nonce_a = 32'd0, golden_nonce_b = 32'd0;
@@ -74,7 +76,7 @@ module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_p
 			.PROGEN(dcm_progen_buf),
 			.LOCKED(dcm_locked),
 			.STATUS(dcm_status),
-			.RST(clk_reset_buf)
+			.RST(clk_reset)
 		);
 
 `ifndef NOPLL
@@ -104,7 +106,7 @@ module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_p
 `endif
 
 	assign write = write_buf;
-	assign pll_reset = pll_stop_buf | ~dcm_locked | clk_reset_buf | dcm_status[2];
+	assign pll_reset = pll_stop     | ~dcm_locked | clk_reset     | dcm_status[2];
 
 `ifdef SIM
 		// Test hashes
@@ -115,15 +117,15 @@ module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_p
 		
 		// Even nonce to test core M1
 		// reg [351:0] inbuf_tmp = { 256'h553bf521cf6f816d21b2e3c660f29469f8b6ae935291176ef5dda6fe442ca6e4, 96'hd1d9011caafb56522d4278bf };
-		// reg [29:0] nonce = (32'h00468bb4 - 4) >> 2;
+		// reg [30:0] nonce = (32'h00468bb4 - 4) >> 1;
 
 		// Odd nonce to test core M2
 		// reg [351:0] inbuf_tmp = { 256'h2e2d0db1cb61da41f552cd4737c16ec3e1a6db8d847736f5c2be55f32532edfd , 96'h14ec001c192f5752152499b9 };
-		// reg [29:0] nonce = (32'h9f7210b3 - 4) >> 2;
+		// reg [30:0] nonce = (32'h9f7210b3 - 4) >> 1;
 
 		// Odd nonce to test core M2 ... NON-matching hash
 		// reg [351:0] inbuf_tmp = { 256'h9794a4f170190ed3a319eaeb00c4f63675afd9731d552d0760c4d34325a82dd3 , 96'h8920011c3add57521d043f55 };
-		// reg [29:0] nonce = (32'h18a6e42f - 4) >> 2;
+		// reg [30:0] nonce = (32'h18a6e42f - 4) >> 1;
 `else
 		reg [351:0] inbuf_tmp;
 		reg [30:0] nonce = 31'd0;					// NB 31 bit nonce counter as LSB is fixed per core
@@ -167,7 +169,7 @@ module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_p
 		    inbuf_tmp[351:344] <= read_buf;
 		    inbuf_tmp[343:0] <= inbuf_tmp[351:8];
 		end
-		inbuf <= inbuf_tmp;  // due to TIG's
+		inbuf <= inbuf_tmp;
 		    
 		if ( wr_start_b1 && wr_start_b2 )
 		begin
@@ -214,10 +216,14 @@ module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_p
 		wr_start_b1 <= wr_start;
 		wr_start_b2 <= wr_start_b1;
 		
-	    reset_buf <= reset;
+	
+	  
+
+                reset_buf <= reset;
+
 
 		reset_buf_d <= reset_buf;
-		if (reset_buf_d & ~reset_buf)					// Increments on trailing edge of reset
+		if (reset_buf_d & ~reset_buf)
 			phase <= ~phase;
 	end
 
@@ -226,8 +232,11 @@ module ztex_ufm1_15d4 (fxclk_in, reset, clk_reset, pll_stop,  dcm_progclk, dcm_p
 		dcm_progclk_buf <= dcm_progclk;
 		dcm_progdata_buf <= dcm_progdata;
 		dcm_progen_buf <= dcm_progen;
-	    clk_reset_buf <= clk_reset;
-	    pll_stop_buf <= pll_stop;
+
+
+
+
+
 	end
 
 
