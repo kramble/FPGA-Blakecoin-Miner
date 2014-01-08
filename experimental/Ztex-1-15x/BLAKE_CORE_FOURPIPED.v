@@ -33,6 +33,8 @@ input [95:0] data;
 input [31:0] nonce;
 output[31:0] hash_out;
 
+//reg [255:0]	data1;			// midstate
+//reg [127:0]	data2;
 wire [31:0] IV0, IV1, IV2, IV3, IV4, IV5, IV6, IV7;
 wire [31:0] imsg0,imsg1,imsg2,imsg3;
 assign IV0 = midstate[31:0];
@@ -101,15 +103,12 @@ BLAKE_G_FOURPIPED blake_g03( .clk(clk),
 // term from scratch. This will omit one XOR operation each, but may be harder to route.
 //`define ALTIMSG
 
-// NOTE For the three core ztex port the nonce increments by four each clock cycle, so the
-// offset calculations are different. TODO Currently NOT implemented for ALTIMSG
-
-localparam imul = 4;		// 1, 2, 4 for one, two or three/four cores (both use 4)
+// NOTE For the ztex port the nonce increments by two each clock cycle, so the offset
+// calculations are different. TODO Currently NOT implemented for ALTIMSG
 
 always @(posedge clk) begin
 //imsg3_d1 <= imsg3 - 1 ^ C2;
-//imsg3_d1 <= imsg3 - 2 ^ C2;
-imsg3_d1 <= imsg3 - imul ^ C2;
+imsg3_d1 <= imsg3 - 2 ^ C2;
 end
    
 BLAKE_G_FOURPIPED blake_g04( .clk(clk),
@@ -160,9 +159,8 @@ always @(posedge clk) begin
 `ifdef ALTIMSG
 imsg3_d2 <= imsg3 - 13 ^ C5;
 `else
-//imsg3_d2 <= ((imsg3_d1 ^ C2) - 11) ^ C5;	// 1 core
-//imsg3_d2 <= ((imsg3_d1 ^ C2) - 22) ^ C5;	// 2 core
-imsg3_d2 <= ((imsg3_d1 ^ C2) - imul * 11) ^ C5;
+//imsg3_d2 <= ((imsg3_d1 ^ C2) - 11) ^ C5;
+imsg3_d2 <= ((imsg3_d1 ^ C2) - 22) ^ C5;
 `endif
 end
    
@@ -215,8 +213,7 @@ always @(posedge clk) begin
 imsg3_d3 <= imsg3 - 19 ^ C6;
 `else
 //imsg3_d3 <= ((imsg3_d2 ^ C5) - 5) ^ C6;
-//imsg3_d3 <= ((imsg3_d2 ^ C5) - 10) ^ C6;
-imsg3_d3 <= ((imsg3_d2 ^ C5) - imul * 5) ^ C6;
+imsg3_d3 <= ((imsg3_d2 ^ C5) - 10) ^ C6;
 `endif
 end
    
@@ -269,8 +266,7 @@ always @(posedge clk) begin
 imsg3_d4 <= imsg3 - 23 ^ C1;
 `else
 //imsg3_d4 <= ((imsg3_d3 ^ C6) - 3) ^ C1;
-//imsg3_d4 <= ((imsg3_d3 ^ C6) - 6) ^ C1;
-imsg3_d4 <= ((imsg3_d3 ^ C6) - imul * 3) ^ C1;
+imsg3_d4 <= ((imsg3_d3 ^ C6) - 6) ^ C1;
 `endif
 end
    
@@ -323,8 +319,7 @@ always @(posedge clk) begin
 imsg3_d5 <= imsg3 - 35 ^ C13;
 `else
 //imsg3_d5 <= ((imsg3_d4 ^ C1) - 11) ^ C13;
-//imsg3_d5 <= ((imsg3_d4 ^ C1) - 22) ^ C13;
-imsg3_d5 <= ((imsg3_d4 ^ C1) - imul * 11) ^ C13;
+imsg3_d5 <= ((imsg3_d4 ^ C1) - 22) ^ C13;
 `endif
 end
    
@@ -377,8 +372,7 @@ always @(posedge clk) begin
 imsg3_d6 <= imsg3 - 41 ^ C8;
 `else
 //imsg3_d6 <= ((imsg3_d5 ^ C13) - 5) ^ C8;
-//imsg3_d6 <= ((imsg3_d5 ^ C13) - 10) ^ C8;
-imsg3_d6 <= ((imsg3_d5 ^ C13) - imul * 5) ^ C8;
+imsg3_d6 <= ((imsg3_d5 ^ C13) - 10) ^ C8;
 `endif
 end
    
@@ -431,8 +425,7 @@ always @(posedge clk) begin
 imsg3_d7 <= imsg3 - 53 ^ C6;
 `else
 //imsg3_d7 <= ((imsg3_d6 ^ C8) - 11) ^ C6;
-//imsg3_d7 <= ((imsg3_d6 ^ C8) - 22) ^ C6;
-imsg3_d7 <= ((imsg3_d6 ^ C8) - imul * 11) ^ C6;
+imsg3_d7 <= ((imsg3_d6 ^ C8) - 22) ^ C6;
 `endif
 end
    
@@ -485,8 +478,7 @@ always @(posedge clk) begin
 imsg3_d8 <= imsg3 - 55 ^ C9;
 `else
 //imsg3_d8 <= ((imsg3_d7 ^ C6) - 1) ^ C9;
-//imsg3_d8 <= ((imsg3_d7 ^ C6) - 2) ^ C9;
-imsg3_d8 <= ((imsg3_d7 ^ C6) - imul) ^ C9;
+imsg3_d8 <= ((imsg3_d7 ^ C6) - 2) ^ C9;
 `endif
 end
 

@@ -50,7 +50,7 @@ module hashcore (hash_clk, reset, midstate, data, nonce, golden_nonce, golden_no
 `endif
 			begin
 				golden_nonce_match <= 1'b1;
-				golden_nonce <= nonce - 32'd260;
+				golden_nonce <= nonce - 32'd130;
 			end
 			hash_out <= hash7;			// Registered to keep in sync with golden_nonce
 		end
