@@ -281,44 +281,13 @@ static int icarus_gets(unsigned char *buf, int fd, struct timeval *tv_finish, st
 	}
 }
 
-static int icarus_write_84byteprotocol(int fd, const void *buf, size_t bufLen)
-{
-	// KRAMBLE This version is needed for the 84 byte protocol lancelot bitstreams (dynamic clock set by target)
-	size_t ret;
-	char tmpbuf[256];
-	const char *srcbuf = buf;
-
-	if (bufLen != 64)
-	{
-		applog(LOG_ERR, "Bad bufLen in write_icarus");
-		return 1;
-	}
-	memset(tmpbuf,0,8);
-	memcpy(tmpbuf+8,srcbuf+52,12);
-	memcpy(tmpbuf+20,srcbuf,32);
-	bufLen = 52;
-
-#if 0
-	char *hexstr;
-	hexstr = bin2hex(tmpbuf, bufLen);
-	applog(LOG_DEBUG, "icarus_write %s", hexstr);
-	free(hexstr);
-#endif
-
-	ret = write(fd, tmpbuf, bufLen);	// NB tmpbuf not buf
-	if (unlikely(ret != bufLen))
-		return 1;
-
-	return 0;
-}
-
 #ifdef LANCELOT_52
 // Lancelot 52 byte protocol (NB does NOT set clock speed in target)
 static int icarus_write(int fd, const void *buf, size_t bufLen)
 {
         size_t ret;
 	char tmpbuf[256];
-	char *srcbuf = buf;
+	const char *srcbuf = buf;
 	char *hexstr;
 	if (bufLen != 64)
 	{
@@ -339,6 +308,18 @@ static int icarus_write(int fd, const void *buf, size_t bufLen)
                 return 1;
 
         return 0;
+}
+
+// The following is used to set lancelot clock speed
+static int icarus_write_raw(int fd, const void *buf, size_t bufLen)
+{
+	size_t ret;
+
+	ret = write(fd, buf, bufLen);
+	if (unlikely(ret != bufLen))
+		return 1;
+
+	return 0;
 }
 
 #else
@@ -630,7 +611,7 @@ static void get_clocks(int this_option_offset, int *cainsmore_clock)
 		if (tmp >= 50 && tmp <= 220)
 				*cainsmore_clock = tmp * 2 / 5;	// NB 2.5Mhz units
 			else {
-				sprintf(err_buf, "Invalid cainsmore-clock must be between 100 and 250", buf);
+				sprintf(err_buf, "Invalid cainsmore-clock must be between 50 and 220", buf);
 				quit(1, err_buf);
 			}
 	}
@@ -666,9 +647,14 @@ static bool icarus_detect_one(const char *devpath)
 
 	get_options(this_option_offset, &baud, &work_division, &fpga_count);
 
-	int cainsmore_clock_speed = 70;		// KRAMBLE 175MHz default
+	int cainsmore_clock_speed = 70;		// KRAMBLE 175MHz default for both CM1 and lancelot
 	get_clocks(this_option_offset, &cainsmore_clock_speed);
 	// applog(LOG_INFO, "cainsmore set clock: %dMHz", cainsmore_clock_speed * 5 / 2);	// Works, but crashes !!
+
+#ifdef LANCELOT_52
+	// Scale back up to actual MHZ
+	cainsmore_clock_speed = cainsmore_clock_speed * 5 / 2;
+#endif
 
 	applog(LOG_DEBUG, "Icarus Detect: Attempting to open %s", devpath);
 
@@ -689,18 +675,18 @@ static bool icarus_detect_one(const char *devpath)
 	// NB Do this here, not after the test for icarus detect else we cannot send
 	// 	  a lower clock speed to a device that is running too fast.
 	
-	// Units 2.5MHz Min 20, Max 88
-
-	// Now taken from opt_cainsmore_clock above
-	// int cainsmore_clock_speed = 70;		// 175MHz (KRAMBLE default)
-	// int cainsmore_clock_speed = 76;		// 190MHz
-	// int cainsmore_clock_speed = 78;		// 195MHz
-	// int cainsmore_clock_speed = 80;		// 200MHz
-	// int cainsmore_clock_speed = 84;		// 210MHz
+	// CM1 Units 2.5MHz Min 20, Max 88, Lancelot directly in MHz
 
 #ifndef LANCELOT_52	// Do NOT use cairnsmore_send_cmd for lancelot
 	int cainsmore_ret = cairnsmore_send_cmd(fd, 0, cainsmore_clock_speed, false);
 	// applog(LOG_ERR, "cainsmore set clock: %s", cainsmore_ret ? "true" : "false");	// Works, but crashes !!
+#else			// Set lancelot clock
+	// NB 52 byte buffer rather than 64 bytes used for CM1
+	unsigned char lancelot_clock_ob[52] = { };	// Init to 0's
+	lancelot_clock_ob[0] = cainsmore_clock_speed;
+	lancelot_clock_ob[1] = 255 - cainsmore_clock_speed;	// 1-s complement
+	// Use raw so as not to convert from CM1 packet format
+	icarus_write_raw(fd, lancelot_clock_ob, sizeof(lancelot_clock_ob));
 #endif
 
 	icarus_close(fd);	// KRAMBLE MOVED below (2 places)

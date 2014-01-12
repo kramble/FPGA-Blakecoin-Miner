@@ -15,7 +15,7 @@ NB Opencl should be disabled in the configuration (it may work, but I've not tes
 ./autogen.sh
 CFLAGS="-O2" ./configure --enable-ztex --enable-icarus --disable-opencl
 
-Prebuit windows binary (pool mining) at ...
+Prebuit windows binary (pool and solo mining) at ...
 https://www.dropbox.com/s/f34zwu3oek0rj4m/cgminer.exe (fixes H-not-zero error)
 
 OLD pool version (4) at https://www.dropbox.com/s/7nufm2dhe4csrs6/cgminer.exe
@@ -73,7 +73,8 @@ timings will be different since the hashvoodo configuration does not chain FPGA 
 Lancelot
 An experimental Lancelot driver can be enabled by uncommenting the #define LANCELOT_52
 macro at the top of driver-icarus.c - NB This will break support the CM1.
-Note that setting clock speed is not supported, so you will still need to use the python
-script to set the initial clock speed after initializing the bitstream.
+Use --cainsmore-clock to set clock speed (default is 175MHz, I clock at 195MHz, YMMV).
 You should use --icarus-timing to tune for best results, use a very short work refresh
 interval, eg --icarus-timing 1.0=20 (20 deciseconds = two seconds refresh).
+Windows binary at https://www.dropbox.com/s/gp0oz2w1bslbibm/cgminer-lancelot-52.exe
+DO NOT USE THIS FOR CAIRNSMORE. Its currently untested (since I run Lancelot on raspi).
