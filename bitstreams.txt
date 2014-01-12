@@ -1,5 +1,7 @@
 Bitstreams have been uploaded to dropbox
 
+Icarus/Lancelot bitstreams - the RECOMMENDED BITSTREAM is the last one LX150-FourGatedClk
+
 experimental/LX150-Midstate
 ---------------------------
 
@@ -34,6 +36,7 @@ experimental/LX150-FourGatedClk
 https://www.dropbox.com/s/mg3rsv1rh2nrc7c/blakefourbufce-2core-ucf146-fmax154.bit
 
 Runs at 200Mhz for 800MHash/sec on the dual fpga Lancelot.
+NB THIS IS THE RECOMMENDED BITSTREAM. I clock it at 195MHz to reduce HW errors, YMMV.
 
 experimental/X6500-Basic
 ------------------------
@@ -51,9 +54,21 @@ NB This is an initial bitstream, tested and working. Default clock is 50MHz.
 Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending
 on the actual device manufacturing and operating temperature.
 
+experimental/CM1
+----------------
+https://www.dropbox.com/s/bbevqb8792emll9/CM1-hv-v04a-175MHz-ucf-150-fmax-161.bit
+
+experimental/Ztex-1-15x
+-----------------------
+https://www.dropbox.com/s/4nnquv6z66an6c5/hal7_ztex_ufm1_15d4_2core_v02.bit
+
+https://www.dropbox.com/s/polv7bu899w4bmi/hal7_ztex_ufm1_15d4_2core_v03.bit
+
 experimental/Ztex-1-15y
 -----------------------
 https://www.dropbox.com/s/vk3k5sb64b8641o/ztex_ufm1_15y1-v06ad-2core-ucf-140MHz-fmax-147-fixed.bit
+
+https://www.dropbox.com/s/1ffqdaj1dowkd0j/ztex_ufm1_15y1-v06ad-t6-ucf-150MHz-fmax-157.bit
 
 Runs at around 200MHz using my modified blake version of cgminer.
 
