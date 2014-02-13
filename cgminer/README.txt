@@ -17,7 +17,7 @@ Windows binary 3.1.1 at https://www.dropbox.com/s/f34zwu3oek0rj4m/cgminer.exe
 Dependancies (DLL) at https://www.dropbox.com/s/xa01f9hhakpsexv/cgminer-3.1.1-blakefpga.zip
 To use, unzip the dependancies then move cgminer.exe into the folder.
 Copy the bitstream folder from an official cgminer-3.1.1 distribution.
-Replace ztex_ufm1_15y1.bin with the BlakeCoin bitstream.
+Replace ztex_ufm1_15y1.bit with the BlakeCoin bitstream.
 Edit the RUNBLAKE.BAT script to set the username/password.
 Do not use this for GPU mining as it will not work (requires --disable-gpu).
 The --debug switch may crash in windows, use -T to work around (disables curses).
