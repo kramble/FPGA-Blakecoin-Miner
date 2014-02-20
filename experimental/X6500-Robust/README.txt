@@ -9,7 +9,17 @@ This will require a modified blake algorithm version of either of
 https://github.com/TheSeven/Modular-Python-Bitcoin-Miner
 https://github.com/fizzisist/x6500-miner
 
-The latter is depreciated, but may be simpler to modify (work in progress - watch this space)
+Do NOT use the above directly, my modified forks are at
+
+https://github.com/kramble/Modular-Python-Bitcoin-Miner
+https://github.com/kramble/x6500-miner
+
+Both should work for solo mining and pool mining, however driver installation may be problematic.
+This is discussed on the bitcointalk thread https://bitcointalk.org/index.php?topic=306894.msg5255046#msg5255046
+(Further updates will follow once I get some feedback)
+
+Beware that the x6500-miner url parameter must NOT be prefixed http:// and you should
+experiment with the overclock parameter (start at 50 and work up, perhaps 125 is achievable?)
 
 Bitstreams ...
 

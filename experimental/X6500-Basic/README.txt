@@ -4,6 +4,8 @@ Based on https://github.com/fpgaminer/Open-Source-FPGA-Bitcoin-Miner/tree/master
 
 Thanks and credits to fpgaminer et al (see top level README)
 
+NB The following notes are OBSOLETE, see ../X6500-Robust/README.txt for the current version
+
 This will require a modified blake algorithm version of either of
 
 https://github.com/TheSeven/Modular-Python-Bitcoin-Miner
