@@ -34,15 +34,15 @@ module blakeminer_top (
 	// ISE can meet timing requirements, then this is the guaranteed
 	// frequency of operation.
 	localparam SYNTHESIS_FREQUENCY = 100;		// SHA256 version uses 200MHz but blake won't run this fast
-												// 100Mhz is a compromise to allow a fast build (TODO increase this)
+												// NB tweak SYNTHESIS_FREQUENCY to optimise FMAX 
 	// What frequency the FPGA should boot-up to.
-	localparam BOOTUP_FREQUENCY = 50;
+	localparam BOOTUP_FREQUENCY = 100;
 	// What is the maximum allowed overclock. User will not be able to set
 	// clock frequency above this threshold.
 	localparam MAXIMUM_FREQUENCY = 250;
 	
 	// Number of mining cores
-	localparam NUM_CORES = 2;					// 1 to 4 (limited by nonce_msb width), typically 2 for sucessful PAR
+	localparam NUM_CORES = 2;					// 1 to 2 (limited by nonce_msb width), typically 2 for sucessful PAR
 
 	//// PLL
 	wire hash_clk;
@@ -66,7 +66,9 @@ module blakeminer_top (
 `else
 	assign hash_clk = CLK_100MHZ;
 	assign clkin_100MHZ = CLK_100MHZ;
-	assign dcm_progdone = 1'b0;
+
+	// assign dcm_progdone = 1'b0;
+	assign dcm_progdone = 1'b1;			// TEST the DCM programming FSM
 `endif
 
 	//// Communication Module
@@ -82,11 +84,12 @@ module blakeminer_top (
 		genvar i;
 		for (i = 0; i < NUM_CORES; i = i + 1)
 		begin: miners
+		// 2 core version only has single bit nonce_msb to reduce getwork interval cf 2 bits
 		`ifdef SIM
-			wire [1:0] nonce_msb = 3 - i;		// Fudge for simulation with < 4 cores as genesis block nonce has 2'b11 prefix
+			wire nonce_msb = 1 - i;		// Fudge for simulation with < 4 cores as genesis block nonce has 2'b11 prefix
 			// wire [1:0] nonce_msb = (2+i)%4;	// For simulation with 2 cores, swaps result to test mux logic (modulo 4 so generic)
 		`else
-			wire [1:0] nonce_msb = i;
+			wire nonce_msb = i;
 		`endif
 			hashcore M (hash_clk, comm_midstate, comm_data, nonce_msb, golden_nonce_i[i*32+31:i*32], gn_match_i[i]);
 		end // for
@@ -135,6 +138,7 @@ module blakeminer_top (
 			golden_nonce <= golden_nonce_i[(NUM_CORES>1?63:31):(NUM_CORES>1?32:0)];
 			is_golden_ticket <= 1'b1;
 		end
+/*		Not needed for 2 core version
 		else
 		if (NUM_CORES > 2 && gn_match_i[NUM_CORES > 2 ? 2 : 0])
 		begin
@@ -147,6 +151,7 @@ module blakeminer_top (
 			golden_nonce <= golden_nonce_i[(NUM_CORES>3?127:31):(NUM_CORES>3?96:0)];
 			is_golden_ticket <= 1'b1;
 		end
+*/
 	end
 
 endmodule

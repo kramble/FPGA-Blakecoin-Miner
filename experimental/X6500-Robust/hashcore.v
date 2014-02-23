@@ -25,14 +25,15 @@ module hashcore (hash_clk, midstate, data, nonce_msb, golden_nonce, golden_nonce
 	input hash_clk;
 	input [255:0] midstate;
 	input [95:0] data;
-	input [1:0] nonce_msb;			// Supports multicore
+	input nonce_msb;			// Supports multicore
 	output reg [31:0] golden_nonce = 32'd0;
 	output reg golden_nonce_match = 1'd0;	// Strobe valid one cycle on a match (needed for serial comms)
 	
 	`ifdef SIM
-		reg [29:0] nonce_cnt = 30'h3fbd9207 - 2;	// Simulation test (genesis block). NB 2 cycle latency on midstate,data
+		// NB matches on ffbd9207 (nonce_msb = 1)
+		reg [30:0] nonce_cnt = 31'h7fbd9207 - 2;	// Simulation test (genesis block). NB 2 cycle latency on midstate,data
 	`else
-		reg [29:0] nonce_cnt = 30'd0;				// Multiple cores use different prefix
+		reg [30:0] nonce_cnt = 31'd0;				// Multiple cores use different prefix
 	`endif
 
 	wire [31:0] nonce;
@@ -47,7 +48,7 @@ module hashcore (hash_clk, midstate, data, nonce_msb, golden_nonce, golden_nonce
 	always @ (posedge hash_clk)
 	begin
 		golden_nonce_match <= 1'b0;
-		nonce_cnt <= nonce_cnt + 30'd1;
+		nonce_cnt <= nonce_cnt + 31'd1;
 		if (gn_match)
 		begin
 			golden_nonce_match <= 1'b1;
@@ -58,7 +59,7 @@ module hashcore (hash_clk, midstate, data, nonce_msb, golden_nonce, golden_nonce
 			`endif
 		end
 		`ifdef SIM
-			if (nonce_cnt == 30'h3fbd9207 + 200)
+			if (nonce_cnt == 31'h7fbd9207 + 200)
 			begin
 				// Reset to generate another match, adjust timings to test before/during/after the capture window in jtag_comm.v
 				// nonce_cnt <= nonce_cnt - 200;			// reg_golden_nonce overwritten at 2780 BEFORE capture window (and several

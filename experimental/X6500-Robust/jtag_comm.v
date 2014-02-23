@@ -139,7 +139,8 @@ module jtag_comm # (
 		.UPDATE(jt_update)
 	);
 `else
-	// Test harness
+	// Test harness - not ideal to have it here, but we need to drive the jtag signals
+	// which are not in the module I/O list
 	reg [2:0] cnt_jt_clk = 0;
 	reg [15:0] jt_cycle = 0;			// Test sequencer
 	always @ (posedge rx_hash_clk)
@@ -159,16 +160,28 @@ module jtag_comm # (
 	begin
 		jt_cycle <= jt_cycle + 1;
 		case (jt_cycle)
+		// Reset
 		1 : rjt_reset <= 1;
 		2 : rjt_reset <= 0;
+		
+		// NB There ought to be a jt_capture operation before the initial shift as the TAP controller
+		// sequence is "jt_capture, jt_shift, jt_update" 
+		
+		// Shift in 38 bits 0e00000000 for C=0 W=0 A=E Data=00000000
+		// ALTERNATIVELY C=0 WR=0 A=E Data=80000000 confirm it is ignored in checksum for read
 		3 : begin
 			rjt_sel <= 1;
 			rjt_shift <= 1;
+			rjt_tdi <= 0;
 			end
+
+		// Comment or uncomment the next two lines to set Data=00000000 or Data=80000000 (the ALTERNATIVE test above)
+		34 : rjt_tdi <= 1;			// Uncomment to generate invalid checksum in original version by setting MSB of data
+		35 : rjt_tdi <= 0;			// (this is ignored the fixed version as only 6 bits are used for the read checksum)
+
 		36 : rjt_tdi <= 1;
 		39 : rjt_tdi <= 0;
 		41 : begin
-			// rjt_tdi <= 0;
 			rjt_sel <= 0;
 			rjt_shift <= 0;
 			end
@@ -188,8 +201,10 @@ module jtag_comm # (
 			rjt_sel <= 0;
 			rjt_capture <= 0;
 			end
-		// And repeat to capture a second golden nonce. Tthis is carefully timed in hashcore.v to either
+
+		// And repeat to capture a second golden nonce. This is carefully timed in hashcore.v to either
 		// fall within the capture window, or before/after it
+		// Shift in 38 bits 0e00000000 for C=0 W=0 A=E Data=00000000 (shifting out the golden nonce)
 		53: begin
 			rjt_sel <= 1;
 			rjt_shift <= 1;
@@ -217,7 +232,101 @@ module jtag_comm # (
 			rjt_sel <= 0;
 			rjt_capture <= 0;
 			end
+
+		// Test writing to clock_config and reading it back.
+		// Confirm the bug in the original version using 6 bit read command and clock_config between 64MHz and 191MHz
+
+`define TEST64		// Comment or uncomment to select test mode
+
+`ifndef TEST64
+		// Shift in 38 bits 3d0000003F for C=1 W=1 A=D Data=0000003F (63MHz)
+		103 : begin
+			rjt_sel <= 1;
+			rjt_shift <= 1;
+			rjt_tdi <= 1;
+			end
+
+		109 : rjt_tdi <= 0;
+		135 : rjt_tdi <= 1;
+		136 : rjt_tdi <= 0;
+		137 : rjt_tdi <= 1;
+`else
+		// ALTERNATIVELY Shift in 1d00000040 for C=0 W=1 A=D Data=00000040 (64MHz) which tests read bug
+		103 : begin
+			rjt_sel <= 1;
+			rjt_shift <= 1;
+			rjt_tdi <= 0;
+			end
+
+		109 : rjt_tdi <= 1;
+		110 : rjt_tdi <= 0;
+		135 : rjt_tdi <= 1;
+		136 : rjt_tdi <= 0;
+		137 : rjt_tdi <= 1;
+		140 : rjt_tdi <= 0;
+`endif	
+		141 : begin
+			rjt_sel <= 0;
+			rjt_shift <= 0;
+			rjt_tdi <= 0;
+			end
+		143 : begin
+			rjt_sel <= 1;			// OK to hold this for one or more cycles
+			rjt_update <= 1;
+			end
+		144 : begin
+			rjt_sel <= 0;
+			rjt_update <= 0;
+			end
+		147 : begin
+			rjt_sel <= 1;			// NB This operation must be for ONE cycle only (else dr is overwritten with FFFFFFFF)
+			rjt_capture <= 1;
+			end
+		// We capture 000000003F which is the value previously written
+		148 : begin
+			rjt_sel <= 0;
+			rjt_capture <= 0;
+			end
+
+		// Shift in 6 bits 0d for C=0 W=0 A=D
+		153: begin
+			rjt_sel <= 1;
+			rjt_shift <= 1;
+			rjt_tdi <= 1;
+			end
+		
+		154 : rjt_tdi <= 0;
+		155 : rjt_tdi <= 1;
+		157 : rjt_tdi <= 0;
+		159 : begin
+			rjt_sel <= 0;
+			rjt_shift <= 0;
+			end
+		162 : begin
+			rjt_sel <= 1;			// OK to hold this for one or more cycles
+			rjt_update <= 1;
+			end
+		163 : begin
+			rjt_sel <= 0;
+			rjt_update <= 0;
+			end
+		165 : begin
+			rjt_sel <= 1;			// NB This operation must be for ONE cycle only (else dr is overwritten with FFFFFFFF)
+			rjt_capture <= 1;
+			end
+		166 : begin
+			rjt_sel <= 0;
+			rjt_capture <= 0;
+			end
+
+		// Shift out result
+		168: begin
+			rjt_sel <= 1;
+			rjt_shift <= 1;
+			end
+
 		endcase
+
 		
 	end
 	
@@ -234,8 +343,10 @@ module jtag_comm # (
 	reg [3:0] addr = 4'hF;
 	reg fifo_data_valid = 1'b0;
 	reg [37:0] dr;
-	reg checksum;
+	reg checksum;						// Full checksum on write
+	reg rd_checksum;					// Partial checksum on read (see KRAMBLE note below)
 	wire checksum_valid = ~checksum;
+	wire rd_checksum_valid = ~rd_checksum;
 
 	/*
 	// Golden Nonce FIFO: from rx_hash_clk to TCK
@@ -277,7 +388,7 @@ module jtag_comm # (
 	reg fifo_we = 1'b0;
 	wire jtag_we = dr[36];
 	wire [3:0] jtag_addr = dr[35:32];
-	wire fifo_rd = checksum_valid & jt_update & ~jtag_we & (jtag_addr == 4'hE) & ~fifo_empty & ~jt_reset & jt_sel;
+	wire fifo_rd = rd_checksum_valid & jt_update & ~jtag_we & (jtag_addr == 4'hE) & ~fifo_empty & ~jt_reset & jt_sel;
 	reg [3:0] rx_gn_flag = 4'b0;
 	always @ (posedge jt_tck_buf)
 	begin
@@ -310,10 +421,9 @@ module jtag_comm # (
 		begin
 			// Capture-DR
 			checksum <= 1'b1;
+			rd_checksum <= 1'b1;
 			dr[37:32] <= 6'd0;
 			addr <= 4'hF;
-			fifo_data_valid <= 1'b0;		// Perhaps this ought be moved into addr == 4'hE case below, though it
-											// should be OK provided capture addr 4'hE immediately follows update
 
 			case (addr)
 				4'h0: dr[31:0] <= 32'h01000100;
@@ -330,7 +440,10 @@ module jtag_comm # (
 				4'hB: dr[31:0] <= data[95:64];
 				4'hC: dr[31:0] <= 32'h55555555;
 				4'hD: dr[31:0] <= clock_config;
-				4'hE: dr[31:0] <= fifo_data_valid ? tck_golden_nonce : 32'hFFFFFFFF;
+				4'hE: begin
+						dr[31:0] <= fifo_data_valid ? tck_golden_nonce : 32'hFFFFFFFF;
+						fifo_data_valid <= 1'b0;
+					  end
 				4'hF: dr[31:0] <= 32'hFFFFFFFF;
 			endcase
 		end
@@ -338,19 +451,38 @@ module jtag_comm # (
 		begin
 			dr <= {jt_tdi, dr[37:1]};
 			checksum <= 1'b1^jt_tdi^dr[37]^dr[36]^dr[35]^dr[34]^dr[33]^dr[32]^dr[31]^dr[30]^dr[29]^dr[28]^dr[27]^dr[26]^dr[25]^dr[24]^dr[23]^dr[22]^dr[21]^dr[20]^dr[19]^dr[18]^dr[17]^dr[16]^dr[15]^dr[14]^dr[13]^dr[12]^dr[11]^dr[10]^dr[9]^dr[8]^dr[7]^dr[6]^dr[5]^dr[4]^dr[3]^dr[2]^dr[1];
+			rd_checksum <= 1'b1^jt_tdi^dr[37]^dr[36]^dr[35]^dr[34]^dr[33];
 		end
-		else if (jt_update & checksum_valid & jt_sel)
+		else if (jt_update & jt_sel)
+		// KRAMBLE: Added rd_checksum_valid to fix bug in readback of clock_config. This may appear superfluous
+		// as the checksum is not used during jt_capture, and if reading clock_config immediately after writing
+		// clock_config, it would appear that addr would be valid, but this is not the case. The TAP goes through
+		// the sequence "jt_capture, jt_shift, jt_update" three times, first to write clock_config, then to set the
+		// read address, then to read the user data register. The addr reg is set to F on the second jt_capture,
+		// so we require the address to be valid on the second jt_update. Unfortunately if only 6 bits are shifted
+		// as in the specification at the top of this file (and implemented in fpga.py), then the remaining 32 bits
+		// will contain the previous C1AAAA plus the top 26 bits of the clock_config. For clock speeds between
+		// 64MHZ and 191MHz, either 01 or 10 will remain in the LSB which gives an invalid checksum and addr is
+		// not updated, so FFFFFFFF is read back (the default value for addr=F).
 		begin
-			addr <= jtag_addr;
-			
-			// fifo_data_valid <= fifo_rd;		// Latch this since it failed in simulation (probably OK live)
-			if (fifo_rd)
-				fifo_data_valid <= 1'b1;
-
-			// TODO: We should min/max the clock_config register
-			// here to match the hard limits and resolution.
-			if (jtag_we)
+			if (~jtag_we & rd_checksum_valid)		// read mode
 			begin
+				addr <= jtag_addr;					// Set address for readback on next jr_capture
+
+				// fifo_data_valid <= fifo_rd;		// Latch this since it failed in simulation (probably OK live)
+				if (fifo_rd)
+					fifo_data_valid <= 1'b1;
+			end
+			else if (jtag_we & checksum_valid)		// write mode
+			begin
+				addr <= jtag_addr;					// NB This permits immediate readback on next jr_capture
+				
+				// fifo_data_valid <= fifo_rd;		// Latch this since it failed in simulation (probably OK live)
+				if (fifo_rd)
+					fifo_data_valid <= 1'b1;
+
+				// TODO: We should min/max the clock_config register
+				// here to match the hard limits and resolution.
 				case (jtag_addr)
 					4'h1: midstate[31:0] <= dr[31:0];
 					4'h2: midstate[63:32] <= dr[31:0];

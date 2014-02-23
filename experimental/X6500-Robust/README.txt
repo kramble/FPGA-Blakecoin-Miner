@@ -15,21 +15,22 @@ https://github.com/kramble/Modular-Python-Bitcoin-Miner
 https://github.com/kramble/x6500-miner
 
 Both should work for solo mining and pool mining, however driver installation may be problematic.
+You must use a getwork pool. Stratum is not supported.
 This is discussed on the bitcointalk thread https://bitcointalk.org/index.php?topic=306894.msg5255046#msg5255046
 (Further updates will follow once I get some feedback)
 
-Beware that the x6500-miner url parameter must NOT be prefixed http:// and you should
-experiment with the overclock parameter (start at 50 and work up, perhaps 125 is achievable?)
+Beware that the x6500-miner url parameter must NOT be prefixed http:// and you should experiment
+with the --overclock parameter on mine.py (start at 120 and work up until you see shares rejected,
+then back off slightly). FMAX plus up to 25% or perhaps slightly more may be achievable.
 
 Bitstreams ...
 
-https://www.dropbox.com/s/58bkb5k4ts8k7j1/X6500-Robust-v02-fmax-100MHz.bit (single core)
+https://www.dropbox.com/s/yai3qyklwqy0tny/X6500-Robust-v05-2core-100MHz-fmax-103MHz.bit
 
-https://www.dropbox.com/s/aalxmdbumare7ez/X6500-Robust-v04-2core-fmax-100MHz.bit (dual core)
-
-NB This is an initial test bitstream which is tested and works. Default clock is 50MHz.
-Overclocking potential is limited, perhaps fmax plus up to 25% may be OK depending
-on the actual device manufacturing and operating temperature.
+NB Default clock is 100MHz and gives 400Mhash/sec for the dual-fpga board.
+Overclocking is recommended, perhaps fmax plus up to 25% may be achievable depending
+on the actual device manufacturing and operating temperature. Fmax will increase in
+future builds (work in progress).
 
 Build notes: Use planahead
 Default strategy should be OK (mine was slightly modified, vis resourcesharing no, -xe c)
