@@ -1,0 +1,153 @@
+Blakeminer Installation Guide For Raspberry Pi
+==============================================
+
+NOTE This is an early draft, the instructions have not been yet tested on a fresh
+installation, so there may be some issues. Feedback is welcome.
+
+This guide documents my original installation on a Debian Wheezy distribution (2012
+vintage), specifically ...
+3.2.27+ #250 PREEMPT Thu Oct 18 19:03:02 BST 2012 armv6l GNU/Linux
+This is quite an old version so there may be some differences. The current distro
+is available from http://www.raspberrypi.org/downloads which I expect will be the
+best one to use for a fresh install (I have not tested this).
+
+For ease of use, I would recommend installation of ssh and ftp servers. On my distro
+ssh is enabled via the initial boot option screen. This can be rerun via:
+sudo raspi-config
+
+Then install ftp:
+sudo apt-get update
+sudo apt-get install ftp ftpd
+
+Installation of Blake Wallet (optional)
+=======================================
+NB Only the command line daemon is covered. I have not tried the QT wallet.
+
+Install the dependancies ...
+sudo apt-get update
+sudo apt-get install build-essential libboost-dev libboost-system-dev \
+     libboost-filesystem-dev libboost-program-options-dev libboost-thread-dev \
+     libssl-dev libdb5.1++-dev libminiupnpc-dev
+
+NB We are using libdb5.1 here rather than the recommended libdb4.8 as this is not
+available for the raspi. The wallet.dat will NOT be compatible with the windows
+client so you won't be able to transfer wallet backups.
+
+Download the blake wallet source from https://github.com/BlueDragon747/Blakecoin
+This is Blakecoin-master.zip. Move it to your home directory and unzip it ...
+unzip Blakecoin-master.zip
+
+Now compile as follows ...
+cd Blakecoin-master/src
+make -f makefile.unix
+
+This will take a couple of hours and will report some warnings. If it completes
+sucessfully you should have a file blakecoind created as the most recent file.
+ls -ltr
+
+Strip the symbol information
+strip blakecoind
+
+Now create the daemon folder and move the file
+mkdir ~/.blakecoin
+mv blakecoind ~/.blakecoin
+cd ~/.blakecoin
+
+Create the configuration file using a text editor (nano is easiest to use)
+nano blakecoin.conf
+
+A typical configuration is as follows ...
+listen=1
+gen=0
+rpcallowip=127.0.0.1
+rpcallowip=192.168.1.*
+rpcuser=secretusername
+rpcpassword=secretpassword
+rpcport=8772
+server=1
+daemon=1
+addnode=162.243.133.80
+addnode=162.243.14.130
+addnode=146.185.135.24
+
+NB choose your own secretusername/secretpassword (anything will do here)
+Save the file and exit, then start the daemon
+./blakecoind
+
+It will now create the wallet and download the blockchain. You can check the
+progress via:
+./blakecoind getinfo
+
+Messages are logged to debug.log
+tail debug.log
+
+To shut down the daemon (eg before a system shutdown)
+./blakecoind stop
+
+Building the cgminer
+====================
+Install the dependancies ...
+sudo apt-get update
+sudo apt-get install build-essential  libusb-1.0-0-dev libusb-1.0-0 libcurl4-openssl-dev \
+     libncurses5-dev libudev-dev
+
+Download the official cgminer 3.1.1 from https://github.com/ckolivas/cgminer/archive/v3.1.1.zip
+unzip cgminer-3.1.1.zip
+
+Download my patches from https://github.com/kramble/FPGA-Blakecoin-Miner/archive/master.zip
+unzip FPGA-Blakecoin-Miner-master.zip
+
+Now copy my patches over the original
+cd FPGA-Blakecoin-Miner-master/cgminer/cgminer-3.1.1
+cp * ~/cgminer-3.1.1
+
+Configure and build
+cd ~/cgminer-3.1.1
+./autogen.sh
+CFLAGS="-O2" ./configure --enable-icarus --enable-ztex
+make
+
+This will take a while and will report some warnings. If it completes sucessfully you should
+have a file cgminer created as the most recent file.
+ls -ltr
+
+Strip the symbol information
+strip cgminer
+
+You can run the miner from the compilation directory, but it's more convenient to move it.
+mkdir ~/blakeminer
+mv cgminer ~/blakeminer
+cd ~/blakeminer
+
+USB Driver installation is not required, but some configuration may be neccessary.
+Specifically for Enterpoint CM1 you will need to add the following line to /etc/modules
+ftdi_sio vendor=0x0403 product=0x8350
+
+With ztex devices you will need to run cgminer as sudo to avoid permissions errors on the
+USB devices (this is fixable by a change to /etc/udev/rules.d but I never bothered).
+BEWARE, this is a security risk.
+
+Some examples (you should create scripts for these commands)
+
+Basic usage for ztex devices, mining solo
+sudo ./cgminer --url localhost:8772 --userpass secretusername:secretpassword 2>log.txt
+
+CM1, mining solo
+./cgminer -S /dev/ttyUSB0 -S /dev/ttyUSB1 -S /dev/ttyUSB2 -S /dev/ttyUSB3 --url localhost:8772 --userpass secretusername:secretpassword 2>log.txt
+
+For background mining, create a script mine.sh containing the cgminer command
+eg this is my lancelot script for pool mining with solo failover
+
+./cgminer -T --verbose --cainsmore-clock 195 --icarus-timing 1.0=20 -S /dev/ttyUSB0 --url stratum+tcp://eu1.blakecoin.com:3334 --userpass username.worker:password --failover-only --url localhost:8772 --userpass secretusername:secretpassword 2>log.txt
+
+Then run it as follows ...
+nohup mine.sh >/dev/null 2>&1 &
+
+To stop it, you will need to identify the process and kill it. If started sudo it
+will run under the root user, so list the processes to find the PID for cgminer.
+ps -ef
+sudo kill PID (enter the pid number instead of PID)
+
+I find the Raspberry Pi can be a little unreliable (the network stack locks up on
+mine from time to time), so you may want to implement a watchdog and automatic reboot.
+I'll publish my scripts for this at a future date.
