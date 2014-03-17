@@ -34,6 +34,7 @@
 
 const char *version = VANITYGEN_VERSION;
 
+int blake_flag = 0;		// KRAMBLE HORRIBLE global flag hack
 
 /*
  * Address search thread main loop
@@ -393,8 +394,13 @@ main(int argc, char **argv)
 			break;
 		case 'X':
 			addrtype = atoi(optarg);
-			// privtype = 128 + addrtype;
-			privtype = 128;	// KRAMBLE for blake
+			if (addrtype == 26)
+			{
+				privtype = 128;		// KRAMBLE for blake
+				blake_flag = 26;	// KRAMBLE HORRIBLE global flag hack
+			}
+			else
+				privtype = 128 + addrtype;
 			scriptaddrtype = addrtype;
 			break;
 		case 'F':

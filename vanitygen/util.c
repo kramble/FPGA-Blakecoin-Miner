@@ -39,7 +39,8 @@
 #include "pattern.h"
 #include "util.h"
 
-#include "blake.c" // KRAMBLE hackky include of c file
+#include "blake.c" 			// KRAMBLE hackky include of c file
+extern int blake_flag;		// KRAMBLE HORRIBLE global flag hack
 
 const char *vg_b58_alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
@@ -125,13 +126,19 @@ vg_b58_encode_check(void *buf, size_t len, char *result)
 	binres = (unsigned char*) malloc(brlen);
 	memcpy(binres, buf, len);
 
-	// KRAMBLE use blakehash instead of SHA256
-	// SHA256(binres, len, hash1);
-	// SHA256(hash1, sizeof(hash1), hash2);
-	sph_blake256_context ctx_blake;
-	sph_blake256_init (&ctx_blake);
-	sph_blake256 (&ctx_blake, binres, len);
-	sph_blake256_close (&ctx_blake, hash2);
+	if (blake_flag == 26)	// HORRIBLE global flag hack
+	{
+		// KRAMBLE use blakehash instead of SHA256
+		sph_blake256_context ctx_blake;
+		sph_blake256_init (&ctx_blake);
+		sph_blake256 (&ctx_blake, binres, len);
+		sph_blake256_close (&ctx_blake, hash2);
+	}
+	else
+	{
+		SHA256(binres, len, hash1);
+		SHA256(hash1, sizeof(hash1), hash2);
+	}
 
 	memcpy(&binres[len], hash2, 4);
 

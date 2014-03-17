@@ -5,8 +5,12 @@ All credits should go to the original authors.
 Note I did not fork the originals as I want this to be a subfolder
 of https://github.com/kramble/FPGA-Blakecoin-Miner
 
-WARNING This is a quick and diry hack to support blakecoin. It BREAKS
-all other coins (including bitcoin). I may tidy this up later.
+WARNING This is a quick and diry hack to support blakecoin. It has
+not been tested for other coins (including bitcoin) and may BREAK.
+ONLY use the -X 26 version byte for BlakeCoin, using for another
+coin will likely generate invalid keys (-X 26 invokes the blake hash
+for the base58 checksum rather than sha256d and also modifies the
+privkey version byte).
 
 You are advised to import the private key into a wallet to confim that
 it is valid before using the address.
@@ -14,7 +18,10 @@ it is valid before using the address.
 Usage: You will need to run as follows to create a valid blake address
 ./vanitygen -F compressed -X 26 pattern
 
-NB Only patterns in the range BT to Bs are valid for blakecoin.
+Only prefixes in the range BU to Br are valid for blakecoin, so you can
+generate any address from BU, BV, BW, BX, BY, BZ and Ba, Bb to Bq, Br
+(excluding Bl since lowercase l is not part of the base58 character set).
+Parts of BT and Bs are also valid (roughly BTng to Bs8G).
 
 I have only tested the linux version, and only for vanitygen itself vis
 make vanitygen
