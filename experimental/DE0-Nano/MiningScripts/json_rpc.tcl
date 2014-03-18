@@ -15,6 +15,7 @@ proc do_rpc_request {url userpass request} {
 }
 
 proc get_work {url userpass} {
+	global verbose
 	array unset work
 
 	if [catch {
@@ -25,7 +26,15 @@ proc get_work {url userpass} {
 		# set work(midstate) [dict get $json_result midstate]
 		set work(data) [dict get $json_result data]
 		set work(target) [dict get $json_result target]
-		# puts $work(data)
+
+		# Getwork pool has a nasty bug where it sends 129 bytes of data instead of 128, so check and
+		# remove the superfluous byte (else jtag_comm sends wrong data to FPGA due to hex reversal)
+		if {[string length $work(data)] == 258} {
+			set work(data) "[string range $work(data) 0 159][string range $work(data) 162 258]"
+		}
+		if { $verbose } {
+			puts "getwork  $work(data)"
+		}
 	} exc] {
 		# NB "unexpected '<' in TOP mode" for solo mining is due to bad username/password
 		# as the wallet daemon returns a HTML document "Unauthorised" instead of JSON
@@ -48,14 +57,14 @@ proc submit_work {url userpass workl} {
 	set hexdata1 [string range $data 0 151]
 	set hexdata2 [reverseHex $nonce]
 	# set hexdata3 [string range $data 160 255]
-	# Hack for blake pool which sends and expects 129 bytes rather than the 128 byte standard
+	# Hack for blake pool
 	set hexdata3 [string range $data 160 257]
 	set hexdata "${hexdata1}${hexdata2}${hexdata3}"
 
-	# puts "Original data: $data"
-	# puts "hex1: $hexdata1"
-	# puts "hex2: $hexdata2"
-	# puts "hex3: $hexdata3"
+	puts "Original data: $data"
+	puts "hex1: $hexdata1"
+	puts "hex2: $hexdata2"
+	puts "hex3: $hexdata3"
 	puts "Golden data: $hexdata"
 
 	#puts "Submitting work ..."

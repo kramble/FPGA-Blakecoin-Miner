@@ -46,9 +46,8 @@ proc push_work_to_fpga {workl} {
 
 	# call external program midstate
 	set midstate [exec midstate  $work(data)]
-	puts "midstate = $midstate"
+	# puts "midstate = $midstate"
 
-	# Not sure if this will be needed
 	set revmidstate [reverseHex $midstate]
 	
 	# Adjust data3 when in test mode
@@ -57,6 +56,7 @@ proc push_work_to_fpga {workl} {
 	
 	if { $testmode } {
 		set data3_nonce [string range $data3 32 39]
+		# puts "nonce_in $data3_nonce"
 		# Need to subtract a few from the nonce else it does not match. The offset needed is
 		# is a little variable, but 6 seems OK. TODO investigate why this is happening.
 		# Perhaps write_instance is not sending data in strict order (eg if DAT3 completes
@@ -72,7 +72,9 @@ proc push_work_to_fpga {workl} {
 		# remembers the final getwork sent from the previous test run.
 		if { $test_prevnonce == $data3_nonce } {
 			set data3_nonce [expr $data3_nonce + 1]
+			# puts "nonce +1"
 		}
+		# puts "nonce $data3_nonce"
 		set test_prevnonce $data3_nonce
 		set newdata3 [string range $data3 0 31]
 		append newdata3 [format "%08x" $data3_nonce]
@@ -91,9 +93,9 @@ proc push_work_to_fpga {workl} {
 
 	if { $verbose } {
 	# Write it out for DEBUG
-	puts $midstate
-	puts $revmidstate
-	puts $data3
+	# puts $midstate
+	puts "midstate $revmidstate"
+	puts "data3    $data3"
 	}
 	
 	set prevtarget $target
