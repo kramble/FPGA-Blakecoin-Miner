@@ -16,14 +16,8 @@ NB Opencl should be disabled in the configuration (it may work, but I've not tes
 CFLAGS="-O2" ./configure --enable-ztex --enable-icarus --disable-opencl
 
 Prebuit windows binary (pool and solo mining) at ...
-https://www.dropbox.com/s/f34zwu3oek0rj4m/cgminer.exe (fixes H-not-zero error)
+https://www.dropbox.com/s/f34zwu3oek0rj4m/cgminer.exe
 
-OLD pool version (4) at https://www.dropbox.com/s/7nufm2dhe4csrs6/cgminer.exe
-
-Prebuit windows binary (solo mining only) at ...
-Third version at https://www.dropbox.com/s/51p61kk5rfjpkyz/cgminer.exe
-Second version without cainsmore-clock at https://www.dropbox.com/s/6ydm22w7rclzhj2/cgminer.exe
-First version without ztex-clock at https://www.dropbox.com/s/ak7jqi0mnd4j1zp/cgminer.exe
 Dependancies (DLL) at https://www.dropbox.com/s/xa01f9hhakpsexv/cgminer-3.1.1-blakefpga.zip
 
 To use the windows version, unzip the dependancies then move cgminer.exe into the folder.
