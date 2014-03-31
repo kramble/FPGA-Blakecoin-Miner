@@ -63,6 +63,8 @@ https://www.dropbox.com/s/4nnquv6z66an6c5/hal7_ztex_ufm1_15d4_2core_v02.bit
 
 https://www.dropbox.com/s/polv7bu899w4bmi/hal7_ztex_ufm1_15d4_2core_v03.bit
 
+https://www.dropbox.com/s/0ngqeeoehul6x8h/hal7_ztex_ufm1_15d4_2core_v04.bit
+
 experimental/Ztex-1-15y
 -----------------------
 https://www.dropbox.com/s/vk3k5sb64b8641o/ztex_ufm1_15y1-v06ad-2core-ucf-140MHz-fmax-147-fixed.bit

@@ -19,6 +19,9 @@ Results:
 Ztex 1.15x clone - grade 2 chip: 168MHz stable with 0 HW, 7.6W power with 40mm fan
 Ztex 1.15x       - grade 3 chip: 180MHz stable with 0 HW, 8.7W power with 40mm fan (360MH/s).
 
+Faster version (approx 20MHz gain) ...
+https://www.dropbox.com/s/0ngqeeoehul6x8h/hal7_ztex_ufm1_15d4_2core_v04.bit
+
 You will need the patched version of cgminer from
 https://github.com/kramble/FPGA-Blakecoin-Miner/tree/master/cgminer/cgminer-3.1.1
 
