@@ -1,3 +1,5 @@
+Icarus/Lancelot ports
+
 LX150-Midstate         Original version, 16 clocks/hash, up to 16 cores
                        Best speed to date 89MHash/sec at 50MHz
 
@@ -18,9 +20,13 @@ LX150-FourGatedClk     As above but using gated clock on the serial bus which ma
                        route better. Work in progress.
 					   
 Any of the last three (or a variant) may give a good result, the difficulty is the
-"random" nature of the Xilinx build process. Not yet managed to fit three cores.
+"random" nature of the Xilinx build process. LX150-FourGatedClk is the current
+version, see ../bitstreams.txt for downloads and ../cgminer/cgminer-3.1.1 for
+mining software (there is also a python miner in ../MiningSoftware, but this is
+depreciated other than for test purposes).
 
-X6500-Basic            Basic port to X6500. NOT WORKING.
+X6500-Basic            Initial basic port to X6500. NOT WORKING, DO NOT USE.
 
-X6500-Robust           A second try. WORKS BUT BUGGY (only the 100MHz synthesis
-                       clock build seems to work, and only up to 63MHz overclock).
+X6500-Robust           Working version, see README in the folder.
+
+CM1, DE0-Nano, Ztex 1.15x and Ztex 1.15y are detailed in their respective READMEs.

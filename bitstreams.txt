@@ -1,42 +1,22 @@
 Bitstreams have been uploaded to dropbox
 
-Icarus/Lancelot bitstreams - the RECOMMENDED BITSTREAM is the last one LX150-FourGatedClk
-
-experimental/LX150-Midstate
----------------------------
-
-https://www.dropbox.com/s/gnxkr0oob1w90ak/blakeminer-ms-v12-12core-ucf-10-fmax-34.bit
-
-https://www.dropbox.com/s/z4fm61r3ilsqum4/blakeminer-blue-16core-ucf-50-fmax-47.bit
-
-These run OK at 50MHz on my Lancelot. Your maximum speed will vary, the default is 25MHz
-but it is configurable at runtime (see MiningSoftware/README.txt). They give 66MH/s and
-89MH/s respectively on the dual fpga Lancelot.
-
-experimental/LX150-Unrolled
----------------------------
-
-https://www.dropbox.com/s/0m4rsqbwb5phga5/blakeunrolled-v03-2core-ucf10-fmax28.bit
-
-https://www.dropbox.com/s/adyecveo2kamicm/blakeunrolled-v03-3core-ucf10-fmax28.bit
-
-These are the fully unrolled pipeleine which runs at 45MHz for an estimated 180MHash/sec
-and 270MHash/sec respectively on the dual fpga Lancelot.
-
-experimental/LX150-UnrolledPiped
---------------------------------
-
-https://www.dropbox.com/s/995nb4lbc7bu1n9/blakeup-v01-3core-ucf56-fmax57.bit
-
-Runs at 75Mhz for 450MHash/sec on the dual fpga Lancelot.
+Icarus/Lancelot bitstream
 
 experimental/LX150-FourGatedClk
 --------------------------------
 
+Dual core version
 https://www.dropbox.com/s/mg3rsv1rh2nrc7c/blakefourbufce-2core-ucf146-fmax154.bit
 
-Runs at 200Mhz for 800MHash/sec on the dual fpga Lancelot.
-NB THIS IS THE RECOMMENDED BITSTREAM. I clock it at 195MHz to reduce HW errors, YMMV.
+This runs at around 195Mhz for 780MHash/sec on the dual fpga Lancelot.
+It may clock slightly faster or slower depending on your hardware. If you get too
+many HW errors, dial the clock speed down a little. A few are unavoidable due to
+timing issues, but one percent or so should be OK.
+
+NEW Three core version by bluedragon
+http://blakecoin.org/blakeminer_FourGatexClk_3core_fmax-102.bit
+
+This runs at 160MHz-165MHz for 960-990MHash/sec (again, YMMV).
 
 experimental/X6500-Basic
 ------------------------
